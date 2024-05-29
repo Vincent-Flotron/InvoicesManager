@@ -66,15 +66,15 @@ class OperationsView(tk.Frame):
         if selected_accounts:
             operations = [op for op in operations if utils.fetch_account_by_id(self.conn, op.account_id).description in selected_accounts]
 
-        # Insert operations into the treeview
-        for operation in operations:
-            account = utils.fetch_account_by_id(self.conn, operation.account_id)
-            invoice = utils.fetch_invoice_by_id(self.conn, operation.invoice_id)
-            self.tree.insert("", "end", values=(operation.id, operation.paid_date, operation.income, operation.outcome, account.description if account else "", invoice.primary_reference if invoice else "", invoice.file_path if invoice else ""))
+            # Insert operations into the treeview
+            for operation in operations:
+                account = utils.fetch_account_by_id(self.conn, operation.account_id)
+                invoice = utils.fetch_invoice_by_id(self.conn, operation.invoice_id)
+                self.tree.insert("", "end", values=(operation.id, operation.paid_date, operation.income, operation.outcome, account.description if account else "", invoice.primary_reference if invoice else "", invoice.file_path if invoice else ""))
 
-        # Add a row to display the total balance
-        total_income, total_outcome = utils.calculate_total_balance(self.conn)
-        self.tree.insert("", "end", values=("", total_income, total_outcome, "Total Balance", "", ""))
+            # Add a row to display the total balance
+            total_income, total_outcome = utils.calculate_total_balance(self.conn)
+            self.tree.insert("", "end", values=("", total_income, total_outcome, "Total Balance", "", ""))
 
     def add_operation(self):
         # Open a dialog to enter operation details
@@ -108,6 +108,7 @@ class OperationsView(tk.Frame):
             if file_path:
                 # Open the file
                 utils.open_file(file_path)
+
 
 
 class OperationDialog(tk.Toplevel):
