@@ -3,12 +3,8 @@ from tkinter import ttk, filedialog
 import sqlite3
 from datetime import datetime
 from models import Account, Invoice, Operation
-from utils import create_tables, insert_account, insert_invoice, insert_operation, \
-                  fetch_invoices, fetch_accounts, fetch_account_by_id, fetch_operations, \
-                  open_file, fetch_invoice_by_id, calculate_total_balance, update_invoice, \
-                  filter_invoices, backup_database, restore_database, delete_invoice, \
-                  delete_account, update_account, delete_operation, update_operation, \
-                  fetch_account
+import utils
+
 import os
 
 
@@ -16,7 +12,7 @@ class InvoicesToPayView(tk.Frame):
     def __init__(self, parent, conn, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
         self.conn = conn
-        create_tables(conn)
+        utils.create_tables(conn)
 
         # Create UI elements
         self.tree = ttk.Treeview(self, columns=("id", "primary_receiver", "receiver_name", "receiver_address", "receiver_account", "primary_reference", "secondary_reference", "invoice_date", "due_date", "paid_date", "amount", "paying_account", "file_path", "remark", "description", "note", "tag", "category"), show="headings")
@@ -64,11 +60,11 @@ class InvoicesToPayView(tk.Frame):
 
         # Fetch invoices from the database or use provided invoices
         if invoices is None:
-            invoices = fetch_invoices(self.conn)
+            invoices = utils.fetch_invoices(self.conn)
 
         # Insert invoices into the treeview
         for invoice in invoices:
-            account = fetch_account(self.conn, invoice.paying_account_id)
+            account = utils.fetch_account(self.conn, invoice.paying_account_id)
             acount_description = account.description if account != None else ""
             self.tree.insert("", "end", values=(invoice.id, invoice.primary_receiver, invoice.receiver_name,
                                                 invoice.receiver_address, invoice.receiver_account, invoice.primary_reference,
@@ -86,7 +82,7 @@ class InvoicesToPayView(tk.Frame):
         selected = self.tree.focus()
         if selected:
             invoice_id = self.tree.item(selected)["values"][0]
-            invoice = fetch_invoice_by_id(self.conn, invoice_id)
+            invoice = utils.fetch_invoice_by_id(self.conn, invoice_id)
             dialog = InvoiceDialog(self, title="Edit Invoice", invoice=invoice)
 
 
@@ -96,12 +92,12 @@ class InvoicesToPayView(tk.Frame):
         if selected:
             # Call delete_invoice() with the selected invoice id
             invoice_id = self.tree.item(selected)["values"][0]
-            delete_invoice(self.conn, invoice_id)
+            utils.delete_invoice(self.conn, invoice_id)
             self.populate_treeview()
 
     def filter_invoices(self):
         search_term = self.search_entry.get().lower()
-        filtered_invoices = filter_invoices(self.conn, search_term)
+        filtered_invoices = utils.filter_invoices(self.conn, search_term)
         self.populate_treeview(filtered_invoices)
 
     def sort_column(self, col, reverse):
@@ -189,7 +185,7 @@ class InvoiceDialog(tk.Toplevel):
         self.paying_account_combo.grid(row=9, column=1)
 
         # Populate the paying account combo box
-        accounts = fetch_accounts(self.conn)
+        accounts = utils.fetch_accounts(self.conn)
         self.paying_account_combo["values"] = [account.description for account in accounts]
 
         # Remark
@@ -295,10 +291,10 @@ class InvoiceDialog(tk.Toplevel):
         ttl = self.title_str
         print("self.title_str " + self.title_str)
         if self.result and self.title_str == "Add Invoice":
-            insert_invoice(self.conn, self.result)
+            utils.insert_invoice(self.conn, self.result)
             self.parent.populate_treeview()
         elif self.result and self.title_str == "Edit Invoice":
-            update_invoice(self.conn, self.result)
+            utils.update_invoice(self.conn, self.result)
             self.parent.populate_treeview()
         self.destroy()
 
@@ -322,7 +318,7 @@ class InvoiceDialog(tk.Toplevel):
 
     def get_paying_account_id(self):
         account_description = self.paying_account_combo.get()
-        for account in fetch_accounts(self.conn):
+        for account in utils.fetch_accounts(self.conn):
             if account.description == account_description:
                 return account.id
         return None
@@ -346,7 +342,7 @@ class InvoiceDialog(tk.Toplevel):
         self.category_entry.insert(0, invoice.category)
 
     def get_account_description(self, account_id):
-        for account in fetch_accounts(self.conn):
+        for account in utils.fetch_accounts(self.conn):
             if account.id == account_id:
                 return account.description
         return None
@@ -387,7 +383,7 @@ class AccountsView(tk.Frame):
         self.tree.delete(*self.tree.get_children())
 
         # Fetch accounts from the database
-        accounts = fetch_accounts(self.conn)
+        accounts = utils.fetch_accounts(self.conn)
 
         # Insert accounts into the treeview
         for account in accounts:
@@ -397,7 +393,7 @@ class AccountsView(tk.Frame):
         # Open a dialog to enter account details
         dialog = AccountDialog(self, title="Add Account")
         # if dialog.result:
-        #     insert_account(self.conn, dialog.result)
+        #     utils.insert_account(self.conn, dialog.result)
         #     self.populate_treeview()
 
     def edit_account(self):
@@ -405,10 +401,10 @@ class AccountsView(tk.Frame):
         selected = self.tree.focus()
         if selected:
             account_id = self.tree.item(selected)["values"][0]
-            account = fetch_account_by_id(self.conn, account_id)
+            account = utils.fetch_account_by_id(self.conn, account_id)
             dialog = AccountDialog(self, title="Edit Account", account=account)
             # if dialog.result:
-            #     update_account(self.conn, dialog.result)
+            #     utils.update_account(self.conn, dialog.result)
             #     self.populate_treeview()
 
     def delete_account(self):
@@ -416,7 +412,7 @@ class AccountsView(tk.Frame):
         selected = self.tree.focus()
         if selected:
             account_id = self.tree.item(selected)["values"][0]
-            delete_account(self.conn, account_id)
+            utils.delete_account(self.conn, account_id)
             self.populate_treeview()
 
 
@@ -484,10 +480,10 @@ class AccountDialog(tk.Toplevel):
         ttl = self.title_str
         print("self.title_str " + self.title_str)
         if self.result and self.title_str == "Add Account":
-            insert_account(self.conn, self.result)
+            utils.insert_account(self.conn, self.result)
             self.parent.populate_treeview()
         elif self.result and self.title_str == "Edit Account":
-            update_account(self.conn, self.result)
+            utils.update_account(self.conn, self.result)
             self.parent.populate_treeview()
         self.destroy()
 
@@ -553,23 +549,23 @@ class OperationsView(tk.Frame):
         self.tree.delete(*self.tree.get_children())
 
         # Fetch operations from the database
-        operations = fetch_operations(self.conn)
+        operations = utils.fetch_operations(self.conn)
 
         # Insert operations into the treeview
         for operation in operations:
-            account = fetch_account_by_id(self.conn, operation.account_id)
-            invoice = fetch_invoice_by_id(self.conn, operation.invoice_id)
+            account = utils.utils.fetch_account_by_id(self.conn, operation.account_id)
+            invoice = utils.fetch_invoice_by_id(self.conn, operation.invoice_id)
             self.tree.insert("", "end", values=(operation.id, operation.income, operation.outcome, account.description if account else "", invoice.primary_reference if invoice else "", invoice.file_path if invoice else ""))
 
         # Add a row to display the total balance
-        total_income, total_outcome = calculate_total_balance(self.conn)
+        total_income, total_outcome = utils.calculate_total_balance(self.conn)
         self.tree.insert("", "end", values=("", total_income, total_outcome, "Total Balance", "", ""))
 
     def add_operation(self):
         # Open a dialog to enter operation details
         dialog = OperationDialog(self, title="Add Operation")
         if dialog.result:
-            insert_operation(self.conn, dialog.result)
+            utils.insert_operation(self.conn, dialog.result)
             self.populate_treeview()
 
     def edit_operation(self):
@@ -577,10 +573,10 @@ class OperationsView(tk.Frame):
         selected = self.tree.focus()
         if selected:
             operation_id = self.tree.item(selected)["values"][0]
-            operation = fetch_operation_by_id(self.conn, operation_id)
+            operation = utils.fetch_operation_by_id(self.conn, operation_id)
             dialog = OperationDialog(self, title="Edit Operation", operation=operation)
             if dialog.result:
-                update_operation(self.conn, dialog.result)
+                utils.update_operation(self.conn, dialog.result)
                 self.populate_treeview()
 
     def delete_operation(self):
@@ -588,7 +584,7 @@ class OperationsView(tk.Frame):
         selected = self.tree.focus()
         if selected:
             operation_id = self.tree.item(selected)["values"][0]
-            delete_operation(self.conn, operation_id)
+            utils.delete_operation(self.conn, operation_id)
             self.populate_treeview()
 
     def open_file(self, event):
@@ -599,7 +595,7 @@ class OperationsView(tk.Frame):
             file_path = self.tree.set(selected_item, "file_path")
             if file_path:
                 # Open the file
-                open_file(file_path)
+                utils.open_file(file_path)
 
 
 class OperationDialog(tk.Toplevel):
@@ -635,7 +631,7 @@ class OperationDialog(tk.Toplevel):
         self.account_combo.grid(row=2, column=1)
 
         # Populate the account combo box
-        accounts = fetch_accounts(self.conn)
+        accounts = utils.fetch_accounts(self.conn)
         self.account_combo["values"] = [account.description for account in accounts]
 
         # Invoice
@@ -645,7 +641,7 @@ class OperationDialog(tk.Toplevel):
         self.invoice_combo.grid(row=3, column=1)
 
         # Populate the invoice combo box
-        invoices = fetch_invoices(self.conn)
+        invoices = utils.fetch_invoices(self.conn)
         self.invoice_combo["values"] = [invoice.primary_reference for invoice in invoices]
 
         # Add buttons to save or cancel
@@ -681,10 +677,10 @@ class OperationDialog(tk.Toplevel):
         ttl = self.title_str
         print("self.title_str " + self.title_str)
         if self.result and self.title_str == "Add Operation":
-            insert_operation(self.conn, self.result)
+            utils.insert_operation(self.conn, self.result)
             self.parent.populate_treeview()
         elif self.result and self.title_str == "Edit Operation":
-            update_operation(self.conn, self.result)
+            utils.update_operation(self.conn, self.result)
             self.parent.populate_treeview()
         self.destroy()
 
@@ -704,14 +700,14 @@ class OperationDialog(tk.Toplevel):
 
     def get_account_id(self):
         account_description = self.account_combo.get()
-        for account in fetch_accounts(self.conn):
+        for account in utils.fetch_accounts(self.conn):
             if account.description == account_description:
                 return account.id
         return None
 
     def get_invoice_id(self):
         invoice_reference = self.invoice_combo.get()
-        for invoice in fetch_invoices(self.conn):
+        for invoice in utils.fetch_invoices(self.conn):
             if invoice.primary_reference == invoice_reference:
                 return invoice.id
         return None
@@ -723,13 +719,13 @@ class OperationDialog(tk.Toplevel):
         self.invoice_combo.set(self.get_invoice_reference(operation.invoice_id))
 
     def get_account_description(self, account_id):
-        for account in fetch_accounts(self.conn):
+        for account in utils.utils.fetch_accounts(self.conn):
             if account.id == account_id:
                 return account.description
         return None
 
     def get_invoice_reference(self, invoice_id):
-        for invoice in fetch_invoices(self.conn):
+        for invoice in utils.fetch_invoices(self.conn):
             if invoice.id == invoice_id:
                 return invoice.primary_reference
         return None
@@ -768,12 +764,12 @@ class MainApp(tk.Tk):
     def backup_database(self):
         backup_dir = filedialog.askdirectory(title="Select Backup Directory")
         if backup_dir:
-            backup_database(self.conn, backup_dir, self.absolute_db_path)
+            utils.backup_database(self.conn, backup_dir, self.absolute_db_path)
 
     def restore_database(self):
         backup_file = filedialog.askopenfilename(title="Select Backup File", filetypes=[("SQLite Database", "*.db")])
         if backup_file:
-            restore_database(self.conn, backup_file, self.absolute_db_path)
+            utils.restore_database(self.conn, backup_file, self.absolute_db_path)
 
 if __name__ == "__main__":
     app = MainApp()
