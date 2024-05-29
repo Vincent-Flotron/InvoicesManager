@@ -4,6 +4,7 @@ from datetime import datetime
 from models import Invoice, Operation
 import utils
 from my_treeview import MyTreeview
+import validation
 
 class InvoicesToPayView(tk.Frame):
     def __init__(self, parent, conn, *args, **kwargs):
@@ -175,21 +176,21 @@ class InvoiceDialog(tk.Toplevel):
 
         # Paid Date
         paid_date_label = tk.Label(label_frame, text="Paid Date:")
-        paid_date_label.grid(row=7, column=0, sticky="w")
+        paid_date_label.grid(row=8, column=0, sticky="w")
         self.paid_date_entry = tk.Entry(label_frame)
-        self.paid_date_entry.grid(row=7, column=1)
+        self.paid_date_entry.grid(row=8, column=1)
 
         # Amount
         amount_label = tk.Label(label_frame, text="Amount:")
-        amount_label.grid(row=8, column=0, sticky="w")
+        amount_label.grid(row=9, column=0, sticky="w")
         self.amount_entry = tk.Entry(label_frame)
-        self.amount_entry.grid(row=8, column=1)
+        self.amount_entry.grid(row=9, column=1)
 
         # Paying Account
         paying_account_label = tk.Label(label_frame, text="Paying Account:")
-        paying_account_label.grid(row=9, column=0, sticky="w")
+        paying_account_label.grid(row=10, column=0, sticky="w")
         self.paying_account_combo = ttk.Combobox(label_frame)
-        self.paying_account_combo.grid(row=9, column=1)
+        self.paying_account_combo.grid(row=10, column=1)
 
         # Populate the paying account combo box
         accounts = utils.fetch_accounts(self.conn)
@@ -197,33 +198,33 @@ class InvoiceDialog(tk.Toplevel):
 
         # Remark
         remark_label = tk.Label(label_frame, text="Remark:")
-        remark_label.grid(row=10, column=0, sticky="w")
+        remark_label.grid(row=11, column=0, sticky="w")
         self.remark_entry = tk.Entry(label_frame)
-        self.remark_entry.grid(row=10, column=1)
+        self.remark_entry.grid(row=11, column=1)
 
         # Description
         description_label = tk.Label(label_frame, text="Description:")
-        description_label.grid(row=11, column=0, sticky="w")
+        description_label.grid(row=12, column=0, sticky="w")
         self.description_entry = tk.Entry(label_frame)
-        self.description_entry.grid(row=11, column=1)
+        self.description_entry.grid(row=12, column=1)
 
         # Note
         note_label = tk.Label(label_frame, text="Note:")
-        note_label.grid(row=12, column=0, sticky="w")
+        note_label.grid(row=13, column=0, sticky="w")
         self.note_entry = tk.Entry(label_frame)
-        self.note_entry.grid(row=12, column=1)
+        self.note_entry.grid(row=13, column=1)
 
         # Tag
         tag_label = tk.Label(label_frame, text="Tag:")
-        tag_label.grid(row=13, column=0, sticky="w")
+        tag_label.grid(row=14, column=0, sticky="w")
         self.tag_entry = tk.Entry(label_frame)
-        self.tag_entry.grid(row=13, column=1)
+        self.tag_entry.grid(row=14, column=1)
 
         # Category
         category_label = tk.Label(label_frame, text="Category:")
-        category_label.grid(row=14, column=0, sticky="w")
+        category_label.grid(row=15, column=0, sticky="w")
         self.category_entry = tk.Entry(label_frame)
-        self.category_entry.grid(row=14, column=1)
+        self.category_entry.grid(row=15, column=1)
 
         # Add a button to open the file browser
         file_path_label = tk.Label(self, text="File Path:")
@@ -341,6 +342,21 @@ class InvoiceDialog(tk.Toplevel):
 
         if not self.get_paying_account_id():
             tk.messagebox.showerror("Error", f"Paying account '{paying_account}' doesn't exist.")
+            return False
+        
+        paid_date = self.paid_date_entry.get()
+        if not validation.date_is_valid(paid_date):
+            tk.messagebox.showerror("Error", f"paid_date '{paid_date}' is not on format YYYY.MM.DD or YY.M.D or YYYY-MM-DD or YY-M-D.")
+            return False
+        
+        due_date = self.due_date_entry.get()
+        if due_date and not validation.date_is_valid(due_date):
+            tk.messagebox.showerror("Error", f"due_date '{due_date}' is not on format YYYY.MM.DD or YY.M.D or YYYY-MM-DD or YY-M-D.")
+            return False
+
+        invoice_date = self.invoice_date_entry.get()
+        if invoice_date and not validation.date_is_valid(invoice_date):
+            tk.messagebox.showerror("Error", f"invoice_date '{invoice_date}' is not on format YYYY.MM.DD or YY.M.D or YYYY-MM-DD or YY-M-D.")
             return False
 
         return True
