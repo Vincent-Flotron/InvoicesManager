@@ -1,6 +1,8 @@
 import sqlite3
 from models import Account, Invoice, Operation
 from tkinter import messagebox
+import os
+import shutil
 
 def create_tables(conn):
     c = conn.cursor()
@@ -63,6 +65,18 @@ def fetch_accounts(conn):
         account = Account(*row)
         accounts.append(account)
     return accounts
+
+def fetch_account(conn, id):
+    if id == None:
+        return None
+    c = conn.cursor()
+    c.execute("SELECT * FROM accounts WHERE id=?", (id,))
+    rows = c.fetchall()
+    accounts = []
+    for row in rows:
+        account = Account(*row)
+        accounts.append(account)
+    return accounts[0]
 
 def update_account(conn, account):
     c = conn.cursor()
@@ -135,20 +149,16 @@ def filter_invoices(conn, search_term):
     return invoices
 
 
-
-import os
-import shutil
-
-def backup_database(conn, backup_dir):
+def backup_database(conn, backup_dir, absolute_db_path):
     if not os.path.exists(backup_dir):
         os.makedirs(backup_dir)
 
     backup_file = os.path.join(backup_dir, "database_backup.db")
-    shutil.copy(conn.database, backup_file)
+    shutil.copy(absolute_db_path, backup_file)
 
-def restore_database(conn, backup_file):
+def restore_database(conn, backup_file, absolute_db_path):
     if os.path.exists(backup_file):
-        shutil.copy(backup_file, conn.database)
+        shutil.copy(backup_file, absolute_db_path)
     else:
         messagebox.showerror("Error", "Backup file not found.")
 
