@@ -11,11 +11,12 @@ class OperationsView(tk.Frame):
         self.conn = conn
 
         # Create UI elements
-        self.tree = MyTreeview(self, columns=("id", "income", "outcome", "account", "invoice", "file_path"), show="headings")
+        self.tree = MyTreeview(self, columns=("id", "paid_date",  "income", "outcome", "account", "invoice", "file_path"), show="headings")
         self.tree.pack(side="top", fill="both", expand=True)
 
         # Configure columns
         self.tree.heading("id", text="ID")
+        self.tree.heading("paid_date", text="Paid")
         self.tree.heading("income", text="Income")
         self.tree.heading("outcome", text="Outcome")
         self.tree.heading("account", text="Account")
@@ -52,7 +53,7 @@ class OperationsView(tk.Frame):
         for operation in operations:
             account = utils.fetch_account_by_id(self.conn, operation.account_id)
             invoice = utils.fetch_invoice_by_id(self.conn, operation.invoice_id)
-            self.tree.insert("", "end", values=(operation.id, operation.income, operation.outcome, account.description if account else "", invoice.primary_reference if invoice else "", invoice.file_path if invoice else ""))
+            self.tree.insert("", "end", values=(operation.id, operation.paid_date, operation.income, operation.outcome, account.description if account else "", invoice.primary_reference if invoice else "", invoice.file_path if invoice else ""))
 
         # Add a row to display the total balance
         total_income, total_outcome = utils.calculate_total_balance(self.conn)
@@ -107,6 +108,12 @@ class OperationDialog(tk.Toplevel):
         label_frame.pack(pady=10, padx=10)
 
         # Income
+        paid_date_label = tk.Label(label_frame, text="Paid date:")
+        paid_date_label.grid(row=0, column=0, sticky="w")
+        self.paid_date_entry = tk.Entry(label_frame)
+        self.paid_date_entry.grid(row=0, column=1)
+
+        # Income
         income_label = tk.Label(label_frame, text="Income:")
         income_label.grid(row=0, column=0, sticky="w")
         self.income_entry = tk.Entry(label_frame)
@@ -154,6 +161,7 @@ class OperationDialog(tk.Toplevel):
             return
 
         id = self.id
+        paid_date = self.paid_date_entry.get()
         income = float(self.income_entry.get())
         outcome = float(self.outcome_entry.get())
         account_id = self.get_account_id()
@@ -161,6 +169,7 @@ class OperationDialog(tk.Toplevel):
 
         operation = Operation(
             id=id,
+            paid_date=paid_date,
             income=income,
             outcome=outcome,
             account_id=account_id,
@@ -168,8 +177,6 @@ class OperationDialog(tk.Toplevel):
         )
 
         self.result = operation
-        ttl = self.title_str
-        print("self.title_str " + self.title_str)
         if self.result and self.title_str == "Add Operation":
             utils.insert_operation(self.conn, self.result)
             self.parent.populate_treeview()

@@ -12,7 +12,7 @@ class AccountsView(tk.Frame):
 
         # Create UI elements
         self.tree = MyTreeview(self, columns=("id", "description", "bank_name", "account_number"), show="headings")
-        self.tree.pack(side="left", fill="both", expand=True)
+        self.tree.pack(side="top", fill="both", expand=True)
 
         # Configure columns
         self.tree.heading("id", text="ID")

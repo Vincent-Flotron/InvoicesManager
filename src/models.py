@@ -29,12 +29,16 @@ class Invoice:
         self.tag = tag
         self.category = category
 
+    def is_paid(self):
+        return self.paid_date != None
+
 class Operation:
-    def __init__(self, id=None, income=0, outcome=0, account_id=None, invoice_id=None, description=None, ):
+    def __init__(self, id=None, paid_date=None, income=0, outcome=0, account_id=None, invoice_id=None, description=None, ):
         self.id = id
+        self.paid_date = paid_date
         self.income = income
         self.outcome = outcome
         self.account_id = account_id
         self.invoice_id = invoice_id
         self.description = description
-        
+
