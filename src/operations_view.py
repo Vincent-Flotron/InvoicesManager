@@ -11,7 +11,19 @@ class OperationsView(tk.Frame):
         self.conn = conn
 
         # Create UI elements
-        self.tree = MyTreeview(self, columns=("id", "paid_date",  "income", "outcome", "account", "invoice", "file_path"), show="headings")
+        self.checkbox_vars = {}
+        self.filter_frame = tk.Frame(self)
+        self.filter_frame.pack(side="top", fill="x")
+
+        # Fetch distinct account descriptions
+        self.account_descriptions = [account.description for account in utils.fetch_accounts(self.conn)]
+        for account_desc in self.account_descriptions:
+            var = tk.BooleanVar(value=True)
+            chk = tk.Checkbutton(self.filter_frame, text=account_desc, variable=var, command=self.populate_treeview)
+            chk.pack(side="left")
+            self.checkbox_vars[account_desc] = var
+
+        self.tree = MyTreeview(self, columns=("id", "paid_date", "income", "outcome", "account", "invoice", "file_path"), show="headings")
         self.tree.pack(side="top", fill="both", expand=True)
 
         # Configure columns
@@ -48,6 +60,11 @@ class OperationsView(tk.Frame):
 
         # Fetch operations from the database
         operations = utils.fetch_operations(self.conn)
+
+        # Filter operations based on selected checkboxes
+        selected_accounts = [desc for desc, var in self.checkbox_vars.items() if var.get()]
+        if selected_accounts:
+            operations = [op for op in operations if utils.fetch_account_by_id(self.conn, op.account_id).description in selected_accounts]
 
         # Insert operations into the treeview
         for operation in operations:
