@@ -30,9 +30,11 @@ class Invoice:
         self.category = category
 
 class Operation:
-    def __init__(self, id=None, income=0, outcome=0, account_id=None, invoice_id=None):
+    def __init__(self, id=None, income=0, outcome=0, account_id=None, invoice_id=None, description=None, ):
         self.id = id
         self.income = income
         self.outcome = outcome
         self.account_id = account_id
         self.invoice_id = invoice_id
+        self.description = description
+        

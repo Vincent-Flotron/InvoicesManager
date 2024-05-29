@@ -2,6 +2,7 @@ import sqlite3
 from models import Account, Invoice, Operation
 from tkinter import messagebox
 import os
+import subprocess
 import shutil
 
 def create_tables(conn):
@@ -66,18 +67,6 @@ def fetch_accounts(conn):
         accounts.append(account)
     return accounts
 
-def fetch_account(conn, id):
-    if id == None:
-        return None
-    c = conn.cursor()
-    c.execute("SELECT * FROM accounts WHERE id=?", (id,))
-    rows = c.fetchall()
-    accounts = []
-    for row in rows:
-        account = Account(*row)
-        accounts.append(account)
-    return accounts[0]
-
 def update_account(conn, account):
     c = conn.cursor()
     c.execute("UPDATE accounts SET description=?, bank_name=?, account_number=? WHERE id=?", (account.description, account.bank_name, account.account_number, account.id))
@@ -115,6 +104,14 @@ def fetch_invoice_by_id(conn, invoice_id):
         return Invoice(*row)
     return None
 
+def fetch_operation_by_id(conn, operations_id):
+    c = conn.cursor()
+    c.execute("SELECT * FROM operations WHERE id=?", (operations_id,))
+    row = c.fetchone()
+    if row:
+        return Operation(*row)
+    return None
+
 def update_operation(conn, operation):
     c = conn.cursor()
     c.execute("UPDATE operations SET income=?, outcome=?, account_id=?, invoice_id=? WHERE id=?", (operation.income, operation.outcome, operation.account_id, operation.invoice_id, operation.id))
@@ -132,8 +129,25 @@ def calculate_total_balance(conn):
     return row[0] or 0, row[1] or 0
 
 def open_file(file_path):
-    # Implement file opening logic here
-    pass
+    """
+    Open a file with the default application associated with its file type.
+
+    Args:
+        file_path (str): The path of the file to be opened.
+    """
+    if os.path.isfile(file_path):
+        try:
+            if os.name == 'nt':  # Windows
+                os.startfile(file_path)
+            elif os.name == 'posix':  # Unix-based systems (Linux, macOS)
+                subprocess.call(['xdg-open', file_path])
+            else:
+                print(f"Unable to open file: {file_path}")
+        except Exception as e:
+            print(f"Error opening file: {e}")
+    else:
+        print(f"File not found: {file_path}")
+
 
 
 

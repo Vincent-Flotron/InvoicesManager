@@ -15,7 +15,7 @@ class InvoicesToPayView(tk.Frame):
         utils.create_tables(conn)
 
         # Create UI elements
-        self.tree = ttk.Treeview(self, columns=("id", "primary_receiver", "receiver_name", "receiver_address", "receiver_account", "primary_reference", "secondary_reference", "invoice_date", "due_date", "paid_date", "amount", "paying_account", "file_path", "remark", "description", "note", "tag", "category"), show="headings")
+        self.tree = MyTreeview(self, columns=("id", "primary_receiver", "receiver_name", "receiver_address", "receiver_account", "primary_reference", "secondary_reference", "invoice_date", "due_date", "paid_date", "amount", "paying_account", "file_path", "remark", "description", "note", "tag", "category"), show="headings")
         self.tree.pack(side="left", fill="both", expand=True)
 
         # Configure columns
@@ -45,14 +45,11 @@ class InvoicesToPayView(tk.Frame):
         filter_button = tk.Button(search_frame, text="Filter", command=self.filter_invoices)
         filter_button.pack(side="right")
 
-        # Configure columns for sorting
-        for col in self.tree["columns"]:
-            self.tree.heading(col, text=col.title(), command=lambda c=col: self.sort_column(c, None))
-            self.tree.heading(col, anchor="center")
-
-
         # Populate the treeview
         self.populate_treeview()
+        
+        # Bind double-click event to open file
+        self.tree.bind("<Double-1>", self.open_file)
 
     def populate_treeview(self, invoices=None):
         # Clear the treeview
@@ -64,7 +61,7 @@ class InvoicesToPayView(tk.Frame):
 
         # Insert invoices into the treeview
         for invoice in invoices:
-            account = utils.fetch_account(self.conn, invoice.paying_account_id)
+            account = utils.fetch_account_by_id(self.conn, invoice.paying_account_id)
             acount_description = account.description if account != None else ""
             self.tree.insert("", "end", values=(invoice.id, invoice.primary_receiver, invoice.receiver_name,
                                                 invoice.receiver_address, invoice.receiver_account, invoice.primary_reference,
@@ -100,14 +97,41 @@ class InvoicesToPayView(tk.Frame):
         filtered_invoices = utils.filter_invoices(self.conn, search_term)
         self.populate_treeview(filtered_invoices)
 
-    def sort_column(self, col, reverse):
-        data = [(self.tree.set(child, col), child) for child in self.tree.get_children("")]
+    def open_file(self, event):
+        # Retrieve the selected item from the treeview
+        selected_item = self.tree.focus()
+        if selected_item:
+            # Get the file path from the selected item
+            file_path = self.tree.set(selected_item, "file_path")
+            if file_path:
+                # Open the file
+                utils.open_file(file_path)
+
+class MyTreeview(ttk.Treeview):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.sort_order = {}
+        for field_name in kwargs['columns']:
+            self.sort_order[field_name] = False
+
+        # Configure columns for sorting
+        for col in self["columns"]:
+            self.heading(col, text=col.title(), command=lambda c=col: self.sort_column(c))
+            self.heading(col, anchor="center")
+
+
+    def sort_column(self, col):
+        reverse = self.sort_order[col]
+        self.sort_order[col] = not reverse
+
+        data = [(self.set(child, col), child) for child in self.get_children("")]
         data.sort(reverse=reverse)
 
-        for index, item in enumerate(data):
-            self.tree.move(item[1], "", index)
+        for index, (value, child) in enumerate(data):
+            self.move(child, "", index)
 
-        self.tree.heading(col, command=lambda: self.sort_column(col, not reverse))
+        self.heading(col, command=lambda: self.sort_column(col))
 
 
 class InvoiceDialog(tk.Toplevel):
@@ -353,7 +377,7 @@ class AccountsView(tk.Frame):
         self.conn = conn
 
         # Create UI elements
-        self.tree = ttk.Treeview(self, columns=("id", "description", "bank_name", "account_number"), show="headings")
+        self.tree = MyTreeview(self, columns=("id", "description", "bank_name", "account_number"), show="headings")
         self.tree.pack(side="left", fill="both", expand=True)
 
         # Configure columns
@@ -392,9 +416,6 @@ class AccountsView(tk.Frame):
     def add_account(self):
         # Open a dialog to enter account details
         dialog = AccountDialog(self, title="Add Account")
-        # if dialog.result:
-        #     utils.insert_account(self.conn, dialog.result)
-        #     self.populate_treeview()
 
     def edit_account(self):
         # Retrieve the selected account from the treeview
@@ -403,9 +424,6 @@ class AccountsView(tk.Frame):
             account_id = self.tree.item(selected)["values"][0]
             account = utils.fetch_account_by_id(self.conn, account_id)
             dialog = AccountDialog(self, title="Edit Account", account=account)
-            # if dialog.result:
-            #     utils.update_account(self.conn, dialog.result)
-            #     self.populate_treeview()
 
     def delete_account(self):
         # Retrieve the selected account from the treeview
@@ -514,7 +532,7 @@ class OperationsView(tk.Frame):
         self.conn = conn
 
         # Create UI elements
-        self.tree = ttk.Treeview(self, columns=("id", "income", "outcome", "account", "invoice", "file_path"), show="headings")
+        self.tree = MyTreeview(self, columns=("id", "income", "outcome", "account", "invoice", "file_path"), show="headings")
         self.tree.pack(side="top", fill="both", expand=True)
 
         # Configure columns
@@ -553,7 +571,7 @@ class OperationsView(tk.Frame):
 
         # Insert operations into the treeview
         for operation in operations:
-            account = utils.utils.fetch_account_by_id(self.conn, operation.account_id)
+            account = utils.fetch_account_by_id(self.conn, operation.account_id)
             invoice = utils.fetch_invoice_by_id(self.conn, operation.invoice_id)
             self.tree.insert("", "end", values=(operation.id, operation.income, operation.outcome, account.description if account else "", invoice.primary_reference if invoice else "", invoice.file_path if invoice else ""))
 
@@ -564,9 +582,6 @@ class OperationsView(tk.Frame):
     def add_operation(self):
         # Open a dialog to enter operation details
         dialog = OperationDialog(self, title="Add Operation")
-        if dialog.result:
-            utils.insert_operation(self.conn, dialog.result)
-            self.populate_treeview()
 
     def edit_operation(self):
         # Retrieve the selected operation from the treeview
@@ -719,7 +734,7 @@ class OperationDialog(tk.Toplevel):
         self.invoice_combo.set(self.get_invoice_reference(operation.invoice_id))
 
     def get_account_description(self, account_id):
-        for account in utils.utils.fetch_accounts(self.conn):
+        for account in utils.fetch_accounts(self.conn):
             if account.id == account_id:
                 return account.description
         return None
