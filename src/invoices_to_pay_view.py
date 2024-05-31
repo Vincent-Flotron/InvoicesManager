@@ -5,6 +5,8 @@ from models import Invoice, Operation
 import utils
 from my_treeview import MyTreeview
 import validation
+import format
+
 
 class InvoicesToPayView(tk.Frame):
     def __init__(self, parent, conn, *args, **kwargs):
@@ -264,9 +266,12 @@ class InvoiceDialog(tk.Toplevel):
         primary_reference = self.primary_reference_entry.get()
         secondary_reference = self.secondary_reference_entry.get()
         invoice_date = self.invoice_date_entry.get()
+        invoice_date = format.format_date(self.invoice_date_entry.get()) if invoice_date != '' else None
         due_date = self.due_date_entry.get()
+        due_date = format.format_date(self.due_date_entry.get()) if due_date != '' else None
         paid_date = self.paid_date_entry.get()
-        amount = float(self.amount_entry.get())
+        paid_date = format.format_date(self.paid_date_entry.get()) if paid_date != '' else None
+        amount = round(float(self.amount_entry.get()), 2)
         paying_account_id = self.get_paying_account_id()
         file_path = self.file_path_entry.get()
         remark = self.remark_entry.get()
@@ -285,7 +290,7 @@ class InvoiceDialog(tk.Toplevel):
             secondary_reference=secondary_reference,
             invoice_date=invoice_date,
             due_date=due_date,
-            paid_date=paid_date if paid_date != '' else None,
+            paid_date=paid_date,
             amount=amount,
             paying_account_id=paying_account_id,
             file_path=file_path,
@@ -345,7 +350,7 @@ class InvoiceDialog(tk.Toplevel):
             return False
         
         paid_date = self.paid_date_entry.get()
-        if not validation.date_is_valid(paid_date):
+        if paid_date and not validation.date_is_valid(paid_date):
             tk.messagebox.showerror("Error", f"paid_date '{paid_date}' is not on format YYYY.MM.DD or YY.M.D or YYYY-MM-DD or YY-M-D.")
             return False
         

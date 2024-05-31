@@ -5,6 +5,7 @@ from models import Operation
 import utils
 from my_treeview import MyTreeview
 import validation
+import format
 
 
 class OperationsView(tk.Frame):
@@ -184,7 +185,7 @@ class OperationDialog(tk.Toplevel):
             return
 
         id = self.id
-        paid_date = self.paid_date_entry.get()
+        paid_date = format.format_date(self.paid_date_entry.get())
         income = float(self.income_entry.get())
         outcome = float(self.outcome_entry.get())
         account_id = self.get_account_id()
@@ -222,7 +223,7 @@ class OperationDialog(tk.Toplevel):
         
         paid_date = self.paid_date_entry.get()
         if not validation.date_is_valid(paid_date):
-            tk.messagebox.showerror("Error", f"Date '{paid_date}' is not on format YYYY.MM.DD or YY.M.D or YYYY-MM-DD or YY-M-D.")
+            tk.messagebox.showerror("Error", f"paid_date '{paid_date}' is not on format YYYY.MM.DD or YY.M.D or YYYY-MM-DD or YY-M-D.")
             return False
 
         return True

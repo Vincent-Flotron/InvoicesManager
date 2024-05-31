@@ -5,7 +5,6 @@ import utils
 from operations_view import OperationsView
 from accounts_view import AccountsView
 from invoices_to_pay_view import InvoicesToPayView
-
 import os
 
 
