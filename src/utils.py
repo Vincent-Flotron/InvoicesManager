@@ -41,6 +41,7 @@ def insert_invoice(conn, invoice):
     c = conn.cursor()
     c.execute("INSERT INTO invoices (primary_receiver, receiver_name, receiver_address, receiver_account, primary_reference, secondary_reference, invoice_date, due_date, paid_date, amount, paying_account_id, file_path, remark, description, note, tag, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (invoice.primary_receiver, invoice.receiver_name, invoice.receiver_address, invoice.receiver_account, invoice.primary_reference, invoice.secondary_reference, invoice.invoice_date, invoice.due_date, invoice.paid_date, invoice.amount, invoice.paying_account_id, invoice.file_path, invoice.remark, invoice.description, invoice.note, invoice.tag, invoice.category))
     conn.commit()
+    return c.lastrowid
     # if invoice.paid_date:
     #     insert_operation(conn, Operation(outcome=invoice.amount, account_id=invoice.paying_account_id, invoice_id=c.lastrowid))
 
@@ -111,7 +112,7 @@ def update_operation_outcome_from_invoice(conn, invoice):
     if existing_operation:
         # Update the existing operation
         operation_id = existing_operation[0]
-        c.execute("UPDATE operations SET account_id = ? WHERE id = ?", (invoice.account_id, operation_id))
+        c.execute("UPDATE operations SET outcome = ? WHERE id = ?", (invoice.amount, operation_id))
     else:
         # Insert a new operation
         c.execute("INSERT INTO operations (outcome, account_id, invoice_id) VALUES (?, ?, ?)",
@@ -138,7 +139,7 @@ def update_operation_account_from_invoice(conn, invoice):
     if existing_operation:
         # Update the existing operation
         operation_id = existing_operation[0]
-        c.execute("UPDATE operations SET outcome = ? WHERE id = ?", (invoice.amount, operation_id))
+        c.execute("UPDATE operations SET account_id = ? WHERE id = ?", (invoice.paying_account_id, operation_id))
     else:
         # Insert a new operation
         c.execute("INSERT INTO operations (outcome, account_id, invoice_id) VALUES (?, ?, ?)",

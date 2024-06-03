@@ -266,11 +266,11 @@ class InvoiceDialog(tk.Toplevel):
         primary_reference = self.primary_reference_entry.get()
         secondary_reference = self.secondary_reference_entry.get()
         invoice_date = self.invoice_date_entry.get()
-        invoice_date = format.format_date(self.invoice_date_entry.get()) if invoice_date != '' else None
+        invoice_date = format.format_date(self.invoice_date_entry.get()) if invoice_date != '' else invoice_date
         due_date = self.due_date_entry.get()
-        due_date = format.format_date(self.due_date_entry.get()) if due_date != '' else None
+        due_date = format.format_date(self.due_date_entry.get()) if due_date != '' else due_date
         paid_date = self.paid_date_entry.get()
-        paid_date = format.format_date(self.paid_date_entry.get()) if paid_date != '' else None
+        paid_date = format.format_date(self.paid_date_entry.get()) if paid_date != '' else paid_date
         amount = round(float(self.amount_entry.get()), 2)
         paying_account_id = self.get_paying_account_id()
         file_path = self.file_path_entry.get()
@@ -301,33 +301,54 @@ class InvoiceDialog(tk.Toplevel):
             category=category
         )
 
-        self.result = invoice
-        if self.result and self.title_str == "Add Invoice":
-            utils.insert_invoice(self.conn, self.result)
+        # self.result = invoice
+        recorded_invoice = utils.fetch_invoice_by_id(self.conn, invoice.id)
+        insert_new_operation = False
+        if invoice and self.title_str == "Add Invoice":
+            invoice.id = utils.insert_invoice(self.conn, invoice)
             self.parent.populate_treeview()
-        elif self.result and self.title_str == "Edit Invoice":
-            recorded_invoice = utils.fetch_invoice_by_id(self.conn, invoice.id)
-            account_is_changing = recorded_invoice.paying_account_id != invoice.paying_account_id
-            amount_is_changing = recorded_invoice.amount != invoice.amount
+            # Create a new operation
+            if invoice.as_paying_account()   \
+               and invoice.is_paid():
+                insert_new_operation = True
+        elif invoice and self.title_str == "Edit Invoice":
+            # update invoice
+            utils.update_invoice(self.conn, invoice)
+            self.parent.populate_treeview()
+
+            # Update relative operation if exists
+            related_operation_was_updated = self.update_related_operation(recorded_invoice, invoice)
+
+            # Create a new operation
+            if not related_operation_was_updated \
+               and invoice.as_paying_account()   \
+               and invoice.is_paid():
+                insert_new_operation = True
+        if insert_new_operation:
+            operation = Operation(
+                            paid_date=invoice.paid_date,
+                            income=0,
+                            outcome=invoice.amount,
+                            account_id=invoice.paying_account_id,
+                            invoice_id=invoice.id
+                        )
+            utils.insert_operation(self.conn, operation)
+        # Update operations view
+        self.notebook.children["!operationsview"].populate_treeview()
+        self.destroy()
+
+    def update_related_operation(self, recorded_invoice, invoice):
+        has_relative_operation = False
+        account_is_changing = recorded_invoice.paying_account_id != invoice.paying_account_id
+        amount_is_changing = recorded_invoice.amount != invoice.amount
+        relative_operation = utils.fetch_operation_by_invoice_id(self.conn, invoice.id)
+        if relative_operation:
             if account_is_changing and invoice.is_paid():
                 utils.update_operation_account_from_invoice(self.conn, invoice)
             if amount_is_changing and invoice.is_paid():
                 utils.update_operation_outcome_from_invoice(self.conn, invoice)
-            utils.update_invoice(self.conn, self.result)
-            self.parent.populate_treeview()
-
-        if invoice.paying_account_id != None and invoice.is_paid():
-            operation = Operation(
-                paid_date=invoice.paid_date,
-                income=0,
-                outcome=invoice.amount,
-                account_id=invoice.paying_account_id,
-                invoice_id=invoice.id
-            )
-            utils.insert_operation(self.conn, operation)
-            self.notebook.children["!operationsview"].populate_treeview()
-        self.destroy()
-
+            has_relative_operation = True
+        return has_relative_operation
 
     def validate_fields(self):
         if not self.primary_receiver_entry.get():
