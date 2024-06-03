@@ -15,31 +15,6 @@ class MyTreeview(ttk.Treeview):
             self.heading(col, text=col.title(), command=lambda c=col: self.sort_column(c))
             self.heading(col, anchor="center")
 
-    # def sort_column(self, col):
-    #     reverse = self.sort_order[col]
-    #     self.sort_order[col] = not reverse
-    #     eadings = self.heading
-    #     children = []
-    #     for child in self.get_children(""):
-    #         children.append(child)
-
-            
-    #     data = [(self.set(child, col), child, child if "actual sold" in self.set(child, col) else None) for child in self.get_children("")]
-    #     data.sort(key=lambda x: (x[2] is not None, x[0],), reverse=reverse)
-
-    #     for index, (value, child, _) in enumerate(data):
-    #         self.move(child, "", index)
-    #         self.heading(col, command=lambda: self.sort_column(col))
-
-    # def sort_column(self, col, reverse):
-    #     data_list = [(self.tree.set(child, col), child) for child in self.tree.get_children('')]
-    #     if col in ['income', 'outcome']:
-    #         data_list = [(float(value), child) for value, child in data_list if value]
-    #     data_list.sort(reverse=reverse)
-    #     for index, (val, child) in enumerate(data_list):
-    #         self.tree.move(child, '', index)
-    #     self.tree.heading(col, command=lambda: self.sort_column(col, not reverse))
-
     def sort_column(self, col):
         actual_sold_row_id = self.remove_actual_sold()
         reverse = self.sort_order[col]
@@ -66,14 +41,10 @@ class MyTreeview(ttk.Treeview):
             # get the value of the "type" cell in the current row
             if 'type' in column_names:
                 type_value = self.set(row_id, "type")
-
-
             # if the value of the "type" cell is "actual_sold", delete the row
             if type_value == "actual sold":
                 self.detach(row_id)
                 return row_id
-                # break  # exit the loop after deleting the first matching row
-        # return detached_row
         return None
     
     def re_insert_actual_sold(self, actual_sold_row_id):

@@ -326,6 +326,7 @@ class InvoiceDialog(tk.Toplevel):
                 insert_new_operation = True
         if insert_new_operation:
             operation = Operation(
+                            type='invoice',
                             paid_date=invoice.paid_date,
                             income=0,
                             outcome=invoice.amount,

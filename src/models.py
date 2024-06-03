@@ -37,13 +37,12 @@ class Invoice:
 
 class Operation:
     op_types=['customized_account_closure', 'starting_amount']
-    def __init__(self, id=None, paid_date="", income=0, outcome=0, account_id=None, invoice_id=None, description="", type=''):
+    def __init__(self, id=None, paid_date="", income=0, outcome=0, account_id=None, invoice_id=None, type=''):
         self.id = id
         self.paid_date = paid_date
         self.income = income
         self.outcome = outcome
         self.account_id = account_id
         self.invoice_id = invoice_id
-        self.description = description
         self.type = type
 
