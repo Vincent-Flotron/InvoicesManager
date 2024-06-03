@@ -26,14 +26,15 @@ class OperationsView(tk.Frame):
             chk.pack(side="left")
             self.checkbox_vars[account_desc] = var
 
-        self.tree = MyTreeview(self, columns=("id", "paid_date", "income", "outcome", "account", "invoice", "file_path"), show="headings")
+        self.tree = MyTreeview(self, columns=("id", "paid_date", "type", "income", "outcome", "account", "invoice", "file_path"), show="headings")
         self.tree.pack(side="top", fill="both", expand=True)
 
         # Configure columns
         self.tree.heading("id", text="ID")
         self.tree.heading("paid_date", text="Paid")
-        self.tree.heading("income", text="Income", command=lambda: self.sort_column("income", True))
-        self.tree.heading("outcome", text="Outcome", command=lambda: self.sort_column("outcome", True))
+        self.tree.heading("type", text="Type")
+        self.tree.heading("income", text="Income")
+        self.tree.heading("outcome", text="Outcome")
         self.tree.heading("account", text="Account")
         self.tree.heading("invoice", text="Invoice ref")
         self.tree.heading("file_path", text="File Path")
@@ -109,15 +110,6 @@ class OperationsView(tk.Frame):
         utils.insert_operation(self.conn, new_operation)
         self.populate_treeview()
 
-    def sort_column(self, col, reverse):
-        data_list = [(self.tree.set(child, col), child) for child in self.tree.get_children('')]
-        if col in ['income', 'outcome']:
-            data_list = [(float(value), child) for value, child in data_list if value]
-        data_list.sort(reverse=reverse)
-        for index, (val, child) in enumerate(data_list):
-            self.tree.move(child, '', index)
-        self.tree.heading(col, command=lambda: self.sort_column(col, not reverse))
-
     def populate_treeview(self):
         # Clear the treeview
         self.tree.delete(*self.tree.get_children())
@@ -136,12 +128,12 @@ class OperationsView(tk.Frame):
             for operation in filtered_operations:
                 account = utils.fetch_account_by_id(self.conn, operation.account_id)
                 invoice = utils.fetch_invoice_by_id(self.conn, operation.invoice_id)
-                self.tree.insert("", "end", values=(operation.id, operation.paid_date, operation.income, operation.outcome, account.description if account else "", invoice.primary_reference if invoice else "", invoice.file_path if invoice else ""))
+                self.tree.insert("", "end", values=(operation.id, operation.paid_date, operation.type, operation.income, operation.outcome, account.description if account else "", invoice.primary_reference if invoice else "", invoice.file_path if invoice else ""))
                 total_income += operation.income
                 total_outcome += operation.outcome
 
             # Add a row to display the total balance
-            self.tree.insert("", "end", values=("", "", total_income, total_outcome, f"Total Balance: {(total_income - total_outcome):.2f} CHF", "", ""))
+            self.tree.insert("", "end", values=("----------->", "----------->", "actual sold", total_income, total_outcome, f"Total Balance: {(total_income - total_outcome):.2f} CHF", "", ""))
 
     def add_operation(self):
         # Open a dialog to enter operation details
@@ -197,23 +189,29 @@ class OperationDialog(tk.Toplevel):
         self.paid_date_entry = tk.Entry(label_frame)
         self.paid_date_entry.grid(row=0, column=1)
 
+        # Type
+        type_label = tk.Label(label_frame, text="Type:")
+        type_label.grid(row=1, column=0, sticky="w")
+        self.type_entry = tk.Entry(label_frame)
+        self.type_entry.grid(row=1, column=1)
+
         # Income
         income_label = tk.Label(label_frame, text="Income:")
-        income_label.grid(row=1, column=0, sticky="w")
+        income_label.grid(row=2, column=0, sticky="w")
         self.income_entry = tk.Entry(label_frame)
-        self.income_entry.grid(row=1, column=1)
+        self.income_entry.grid(row=2, column=1)
 
         # Outcome
         outcome_label = tk.Label(label_frame, text="Outcome:")
-        outcome_label.grid(row=2, column=0, sticky="w")
+        outcome_label.grid(row=3, column=0, sticky="w")
         self.outcome_entry = tk.Entry(label_frame)
-        self.outcome_entry.grid(row=2, column=1)
+        self.outcome_entry.grid(row=3, column=1)
 
         # Account
         account_label = tk.Label(label_frame, text="Account:")
-        account_label.grid(row=3, column=0, sticky="w")
+        account_label.grid(row=4, column=0, sticky="w")
         self.account_combo = ttk.Combobox(label_frame)
-        self.account_combo.grid(row=3, column=1)
+        self.account_combo.grid(row=4, column=1)
 
         # Populate the account combo box
         accounts = utils.fetch_accounts(self.conn)
@@ -221,9 +219,9 @@ class OperationDialog(tk.Toplevel):
 
         # Invoice
         invoice_label = tk.Label(label_frame, text="Invoice:")
-        invoice_label.grid(row=4, column=0, sticky="w")
+        invoice_label.grid(row=5, column=0, sticky="w")
         self.invoice_combo = ttk.Combobox(label_frame)
-        self.invoice_combo.grid(row=4, column=1)
+        self.invoice_combo.grid(row=5, column=1)
 
         # Populate the invoice combo box
         invoices = utils.fetch_invoices(self.conn)
@@ -250,14 +248,16 @@ class OperationDialog(tk.Toplevel):
         outcome = float(self.outcome_entry.get())
         account_id = self.get_account_id()
         invoice_id = self.get_invoice_id()
+        op_type = self.type_entry.get()
 
         operation = Operation(
             id=id,
-            paid_date=datetime(paid_date),
+            paid_date=paid_date,
             income=round(income, 2),
             outcome=round(outcome, 2),
             account_id=account_id,
-            invoice_id=invoice_id
+            invoice_id=invoice_id,
+            type=op_type
         )
 
         self.result = operation
@@ -285,6 +285,13 @@ class OperationDialog(tk.Toplevel):
         if not validation.date_is_valid(paid_date):
             tk.messagebox.showerror("Error", f"paid_date '{paid_date}' is not on format YYYY.MM.DD or YY.M.D or YYYY-MM-DD or YY-M-D.")
             return False
+        
+        op_type = self.type_entry.get()
+        if not validation.operation_type_is_valid(op_type):
+            tk.messagebox.showerror("Error", f"type '{op_type}' is not on in the allowed types list: {Operation.op_types}")
+            return False
+        
+        
 
         return True
 
@@ -303,6 +310,8 @@ class OperationDialog(tk.Toplevel):
         return None
 
     def populate_fields(self, operation):
+        self.paid_date_entry.insert(0, operation.paid_date)
+        self.type_entry.insert(0, operation.type)
         self.income_entry.insert(0, str(operation.income))
         self.outcome_entry.insert(0, str(operation.outcome))
         self.account_combo.set(self.get_account_description(operation.account_id))

@@ -199,13 +199,13 @@ def fetch_operations_by_type(conn, operation_type):
 
 def insert_operation(conn, operation):
     c = conn.cursor()
-    c.execute("INSERT INTO operations (paid_date, income, outcome, account_id, invoice_id) VALUES (?, ?, ?, ?, ?)", (operation.paid_date, operation.income, operation.outcome, operation.account_id, operation.invoice_id))
+    c.execute("INSERT INTO operations (paid_date, income, outcome, account_id, invoice_id, type) VALUES (?, ?, ?, ?, ?, ?)", (operation.paid_date, operation.income, operation.outcome, operation.account_id, operation.invoice_id, operation.type))
     conn.commit()
     return None
 
 def update_operation(conn, operation):
     c = conn.cursor()
-    c.execute("UPDATE operations SET paid_date=?, income=?, outcome=?, account_id=?, invoice_id=? WHERE id=?", (operation.paid_date, operation.income, operation.outcome, operation.account_id, operation.invoice_id, operation.id))
+    c.execute("UPDATE operations SET paid_date=?, income=?, outcome=?, account_id=?, invoice_id=?, type=? WHERE id=?", (operation.paid_date, operation.income, operation.outcome, operation.account_id, operation.invoice_id, operation.id, operation.type))
     conn.commit()
 
 def delete_operation(conn, operation_id):

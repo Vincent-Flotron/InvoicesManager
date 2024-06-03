@@ -36,7 +36,8 @@ class Invoice:
         return self.paying_account_id != None
 
 class Operation:
-    def __init__(self, id=None, paid_date="", income=0, outcome=0, account_id=None, invoice_id=None, description="", ):
+    op_types=['customized_account_closure', 'starting_amount']
+    def __init__(self, id=None, paid_date="", income=0, outcome=0, account_id=None, invoice_id=None, description="", type=''):
         self.id = id
         self.paid_date = paid_date
         self.income = income
