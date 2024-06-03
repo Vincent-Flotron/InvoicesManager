@@ -50,12 +50,64 @@ class OperationsView(tk.Frame):
 
         delete_button = tk.Button(button_frame, text="Delete", command=self.delete_operation)
         delete_button.pack(side="left")
+                
+        # Add Customized Account Closure button
+        customized_closure_button = tk.Button(button_frame, text="Add Customized Account Closure", command=self.add_customized_account_closure)
+        customized_closure_button.pack(side="left")
+
 
         # Populate the treeview
         self.populate_treeview()
 
         # Bind double-click event to open file
         self.tree.bind("<Double-1>", self.open_file)
+
+    def add_customized_account_closure(self):
+        selected = self.tree.focus()
+        if not selected:
+            tk.messagebox.showerror("Error", "No operation selected.")
+            return
+
+        selected_accounts = [desc for desc, var in self.checkbox_vars.items() if var.get()]
+        if not selected_accounts:
+            tk.messagebox.showerror("Error", "No account selected.")
+            return
+
+        total_income = 0
+        total_outcome = 0
+
+        # Fetch operations from the database
+        operations = utils.fetch_operations(self.conn)
+
+        # Filter operations based on selected accounts
+        filtered_operations = [op for op in operations if utils.fetch_account_by_id(self.conn, op.account_id).description in selected_accounts]
+
+        # Find the last customized_account_closure or starting_amount operation
+        for account in selected_accounts:
+            last_closure_operations = [op for op in filtered_operations if op.type == 'customized_account_closure' and utils.fetch_account_by_id(self.conn, op.account_id).description == account]
+            last_starting_operations = [op for op in filtered_operations if op.type == 'starting_amount' and utils.fetch_account_by_id(self.conn, op.account_id).description == account]
+
+            if last_closure_operations:
+                last_operation = last_closure_operations[-1]
+                total_income += sum(op.income for op in last_closure_operations)
+                total_outcome += sum(op.outcome for op in last_closure_operations)
+            elif last_starting_operations:
+                last_operation = last_starting_operations[-1]
+                total_income += sum(op.income for op in last_starting_operations)
+                total_outcome += sum(op.outcome for op in last_starting_operations)
+
+        new_operation = Operation(
+            id=None,  # Assuming ID is auto-incremented
+            paid_date=datetime.now().strftime("%Y-%m-%d"),
+            income=total_income,
+            outcome=total_outcome,
+            account_id=utils.fetch_account_by_description(self.conn, selected_accounts[0]).id,
+            invoice_id=None,
+            type='customized_account_closure'
+        )
+
+        utils.insert_operation(self.conn, new_operation)
+        self.populate_treeview()
 
     def sort_column(self, col, reverse):
         data_list = [(self.tree.set(child, col), child) for child in self.tree.get_children('')]

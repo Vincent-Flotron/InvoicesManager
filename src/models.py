@@ -44,4 +44,5 @@ class Operation:
         self.account_id = account_id
         self.invoice_id = invoice_id
         self.description = description
+        self.type = type
 

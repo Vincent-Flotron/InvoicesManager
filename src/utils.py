@@ -82,6 +82,14 @@ def fetch_account_by_id(conn, account_id):
     row = c.fetchone()
     if row:
         return Account(*row)
+    
+def fetch_account_by_description(conn, description):
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM accounts WHERE description = ?", (description,))
+    row = cursor.fetchone()
+    if row:
+        return Account(*row)
+    return None
 
 def insert_account(conn, account):
     c = conn.cursor()
@@ -182,6 +190,12 @@ def fetch_operation_by_invoice_id(conn, invoice_id):
     if row:
         return Operation(*row)
     return None
+
+def fetch_operations_by_type(conn, operation_type):
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM operations WHERE type = ?", (operation_type,))
+    rows = cursor.fetchall()
+    return [Operation(*row) for row in rows]
 
 def insert_operation(conn, operation):
     c = conn.cursor()
