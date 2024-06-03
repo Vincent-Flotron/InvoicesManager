@@ -26,7 +26,7 @@ class OperationsView(tk.Frame):
             chk.pack(side="left")
             self.checkbox_vars[account_desc] = var
 
-        self.tree = MyTreeview(self, columns=("id", "paid_date", "income", "outcome", "account", "invoice ref", "file_path"), show="headings")
+        self.tree = MyTreeview(self, columns=("id", "paid_date", "income", "outcome", "account", "invoice", "file_path"), show="headings")
         self.tree.pack(side="top", fill="both", expand=True)
 
         # Configure columns
@@ -35,7 +35,7 @@ class OperationsView(tk.Frame):
         self.tree.heading("income", text="Income", command=lambda: self.sort_column("income", True))
         self.tree.heading("outcome", text="Outcome", command=lambda: self.sort_column("outcome", True))
         self.tree.heading("account", text="Account")
-        self.tree.heading("invoice", text="Invoice")
+        self.tree.heading("invoice", text="Invoice ref")
         self.tree.heading("file_path", text="File Path")
 
         # Add buttons
