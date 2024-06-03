@@ -26,14 +26,14 @@ class OperationsView(tk.Frame):
             chk.pack(side="left")
             self.checkbox_vars[account_desc] = var
 
-        self.tree = MyTreeview(self, columns=("id", "paid_date", "income", "outcome", "account", "invoice", "file_path"), show="headings")
+        self.tree = MyTreeview(self, columns=("id", "paid_date", "income", "outcome", "account", "invoice ref", "file_path"), show="headings")
         self.tree.pack(side="top", fill="both", expand=True)
 
         # Configure columns
         self.tree.heading("id", text="ID")
         self.tree.heading("paid_date", text="Paid")
-        self.tree.heading("income", text="Income")
-        self.tree.heading("outcome", text="Outcome")
+        self.tree.heading("income", text="Income", command=lambda: self.sort_column("income", True))
+        self.tree.heading("outcome", text="Outcome", command=lambda: self.sort_column("outcome", True))
         self.tree.heading("account", text="Account")
         self.tree.heading("invoice", text="Invoice")
         self.tree.heading("file_path", text="File Path")
@@ -56,6 +56,15 @@ class OperationsView(tk.Frame):
 
         # Bind double-click event to open file
         self.tree.bind("<Double-1>", self.open_file)
+
+    def sort_column(self, col, reverse):
+        data_list = [(self.tree.set(child, col), child) for child in self.tree.get_children('')]
+        if col in ['income', 'outcome']:
+            data_list = [(float(value), child) for value, child in data_list if value]
+        data_list.sort(reverse=reverse)
+        for index, (val, child) in enumerate(data_list):
+            self.tree.move(child, '', index)
+        self.tree.heading(col, command=lambda: self.sort_column(col, not reverse))
 
     def populate_treeview(self):
         # Clear the treeview
@@ -114,7 +123,6 @@ class OperationsView(tk.Frame):
             if file_path:
                 # Open the file
                 utils.open_file(file_path)
-
 
 
 class OperationDialog(tk.Toplevel):
