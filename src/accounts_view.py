@@ -2,39 +2,16 @@ import tkinter as tk
 from datetime import datetime
 from models import Account
 import utils
-from my_treeview import MyTreeview
+from base_view import BaseView
 
 
-class AccountsView(tk.Frame):
+class AccountsView(BaseView):
     def __init__(self, parent, conn, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
-        self.conn = conn
-
-        # Create UI elements
-        self.tree = MyTreeview(self, columns=("id", "description", "bank_name", "account_number"), show="headings")
-        self.tree.pack(side="top", fill="both", expand=True)
-
-        # Configure columns
-        self.tree.heading("id", text="ID")
-        self.tree.heading("description", text="Description")
-        self.tree.heading("bank_name", text="Bank Name")
-        self.tree.heading("account_number", text="Account Number")
-
-        # Add buttons
-        button_frame = tk.Frame(self)
-        button_frame.pack(side="bottom", fill="x")
-
-        add_button = tk.Button(button_frame, text="Add", command=self.add_account)
-        add_button.pack(side="left")
-
-        edit_button = tk.Button(button_frame, text="Edit", command=self.edit_account)
-        edit_button.pack(side="left")
-
-        delete_button = tk.Button(button_frame, text="Delete", command=self.delete_account)
-        delete_button.pack(side="left")
-
-        # Populate the treeview
-        self.populate_treeview()
+        columns = ("id", "description", "bank_name", "iban")
+        dialog_class = AccountDialog
+        delete_func = utils.delete_account
+        columns_names = columns
+        super().__init__(parent, conn, "accounts", columns, columns_names, dialog_class, delete_func, *args, **kwargs)
 
     def populate_treeview(self):
         # Clear the treeview
@@ -45,38 +22,18 @@ class AccountsView(tk.Frame):
 
         # Insert accounts into the treeview
         for account in accounts:
-            self.tree.insert("", "end", values=(account.id, account.description, account.bank_name, account.account_number))
-
-    def add_account(self):
-        # Open a dialog to enter account details
-        dialog = AccountDialog(self, title="Add Account")
-
-    def edit_account(self):
-        # Retrieve the selected account from the treeview
-        selected = self.tree.focus()
-        if selected:
-            account_id = self.tree.item(selected)["values"][0]
-            account = utils.fetch_account_by_id(self.conn, account_id)
-            dialog = AccountDialog(self, title="Edit Account", account=account)
-
-    def delete_account(self):
-        # Retrieve the selected account from the treeview
-        selected = self.tree.focus()
-        if selected:
-            account_id = self.tree.item(selected)["values"][0]
-            utils.delete_account(self.conn, account_id)
-            self.populate_treeview()
-
+            self.tree.insert("", "end", values=(account.id, account.description, account.bank_name, account.iban))
 
 class AccountDialog(tk.Toplevel):
-    def __init__(self, parent, title, account=None):
+    def __init__(self, parent, notebook, title, item=None):
         super().__init__(parent)
         self.title(title)
         self.title_str = title
         self.parent = parent
+        self.notebook = notebook
         self.result = None
         self.conn = parent.conn
-        self.id = account.id if account != None else None
+        self.id = item.id if item != None else None
 
         # Create UI elements to enter account details
         label_frame = tk.LabelFrame(self, text="Account Details")
@@ -108,8 +65,8 @@ class AccountDialog(tk.Toplevel):
         cancel_button.pack()
 
         # Populate the dialog with account data if editing
-        if account:
-            self.populate_fields(account)
+        if item:
+            self.populate_fields(item)
 
     def save(self):
         if not self.validate_fields():
@@ -131,10 +88,10 @@ class AccountDialog(tk.Toplevel):
         self.result = account
         ttl = self.title_str
         print("self.title_str " + self.title_str)
-        if self.result and self.title_str == "Add Account":
+        if self.result and self.title_str == "Add_Item":
             utils.insert_account(self.conn, self.result)
             self.parent.populate_treeview()
-        elif self.result and self.title_str == "Edit Account":
+        elif self.result and self.title_str == "Edit_Item":
             utils.update_account(self.conn, self.result)
             self.parent.populate_treeview()
         self.destroy()

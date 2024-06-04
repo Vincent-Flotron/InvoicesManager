@@ -1,133 +1,21 @@
 import tkinter as tk
 from tkinter import ttk
-from datetime import datetime
 from models import Invoice, Operation
 import utils
-from my_treeview import MyTreeview
 import validation
 import format
+from base_view import BaseView
 
-
-class InvoicesToPayView(tk.Frame):
+class InvoicesToPayView(BaseView):
     def __init__(self, parent, conn, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
-        self.conn = conn
-        utils.create_tables(conn)
-        self.parent = parent
-
-        # Create UI elements
-        self.tree = MyTreeview(self, columns=("id", "primary_receiver", "receiver_name", "receiver_address", "receiver_account", "primary_reference", "secondary_reference", "invoice_date", "due_date", "paid_date", "amount", "paying_account", "file_path", "remark", "description", "note", "tag", "category"), show="headings")
-        self.tree.pack(side="top", fill="both", expand=True)
-
-        # Configure columns
-        self.tree.heading("primary_receiver", text="Primary Receiver")
-        # Configure other columns...
-
-        # Add buttons
-        button_frame = tk.Frame(self)
-        button_frame.pack(side="bottom", fill="x")
-
-        add_button = tk.Button(button_frame, text="Add", command=self.add_invoice)
-        add_button.pack(side="left")
-
-        edit_button = tk.Button(button_frame, text="Edit", command=self.edit_invoice)
-        edit_button.pack(side="left")
-
-        delete_button = tk.Button(button_frame, text="Delete", command=self.delete_invoice)
-        delete_button.pack(side="left")
-
-        # Add a search entry and filter button
-        search_frame = tk.Frame(self)
-        search_frame.pack(side="top", fill="x")
-
-        self.search_entry = tk.Entry(search_frame)
-        self.search_entry.pack(side="left", fill="x", expand=True)
-
-        filter_button = tk.Button(search_frame, text="Filter", command=self.filter_invoices)
-        filter_button.pack(side="right")
-
-        # Label to display the sum of selected invoices
-        self.sum_label = tk.Label(self, text="Sum of selected invoices: 0.00")
-        self.sum_label.pack(side="top", fill="x")
-
-        # Populate the treeview
-        self.populate_treeview()
-        
-        # Bind events
-        self.tree.bind("<Double-1>", self.open_file)
-        self.tree.bind("<<TreeviewSelect>>", self.update_sum)
-
-    def populate_treeview(self, invoices=None):
-        # Clear the treeview
-        self.tree.delete(*self.tree.get_children())
-
-        # Fetch invoices from the database or use provided invoices
-        if invoices is None:
-            invoices = utils.fetch_invoices(self.conn)
-
-        # Insert invoices into the treeview
-        for invoice in invoices:
-            account = utils.fetch_account_by_id(self.conn, invoice.paying_account_id)
-            acount_description = account.description if account != None else ""
-            self.tree.insert("", "end", values=(invoice.id, invoice.primary_receiver, invoice.receiver_name,
-                                                invoice.receiver_address, invoice.receiver_account, invoice.primary_reference,
-                                                invoice.secondary_reference, invoice.invoice_date, invoice.due_date,
-                                                invoice.paid_date, invoice.amount, acount_description, invoice.file_path,
-                                                invoice.remark, invoice.description, invoice.note, invoice.tag, invoice.category))
-
-    def add_invoice(self):
-        # Open a dialog to enter invoice details
-        dialog = InvoiceDialog(self, self.parent, title="Add Invoice")
-
-
-    def edit_invoice(self):
-        # Retrieve the selected invoice from the treeview
-        selected = self.tree.focus()
-        if selected:
-            invoice_id = self.tree.item(selected)["values"][0]
-            invoice = utils.fetch_invoice_by_id(self.conn, invoice_id)
-            dialog = InvoiceDialog(self, self.parent, title="Edit Invoice", invoice=invoice)
-
-
-    def delete_invoice(self):
-        # Retrieve the selected invoice from the treeview
-        selected = self.tree.focus()
-        if selected:
-            # Call delete_invoice() with the selected invoice id
-            invoice_id = self.tree.item(selected)["values"][0]
-            relative_operation = utils.fetch_operation_by_invoice_id(self.conn, invoice_id)
-            if relative_operation == None:
-                utils.delete_invoice(self.conn, invoice_id)
-                self.populate_treeview()
-            else:
-                tk.messagebox.showinfo("Impossible to delete", f"The Operation with id '{relative_operation.id}' is linked to this invoice.\nPlease delete this operation before.")
-
-    def filter_invoices(self):
-        search_term = self.search_entry.get().lower()
-        filtered_invoices = utils.filter_invoices(self.conn, search_term)
-        self.populate_treeview(filtered_invoices)
-
-    def open_file(self, event):
-        # Retrieve the selected item from the treeview
-        selected_item = self.tree.focus()
-        if selected_item:
-            # Get the file path from the selected item
-            file_path = self.tree.set(selected_item, "file_path")
-            if file_path:
-                # Open the file
-                utils.open_file(file_path)
-
-    def update_sum(self, event):
-        selected_items = self.tree.selection()
-        total_sum = 0.0
-        for item in selected_items:
-            amount = self.tree.item(item, "values")[10]  # Assuming amount is in the 10th column
-            total_sum += float(amount)
-        self.sum_label.config(text=f"Sum of selected invoices: {total_sum:.2f}")
-
+        columns = ("id", "primary_receiver", "receiver_name", "receiver_address", "receiver_account", "primary_reference", "secondary_reference", "invoice_date", "due_date", "paid_date", "amount", "file_path")
+        dialog_class = InvoiceDialog
+        delete_func = utils.delete_invoice
+        columns_names = columns
+        super().__init__(parent, conn, "invoices_to_pay", columns, columns_names, dialog_class, delete_func, *args, **kwargs)
 
 class InvoiceDialog(tk.Toplevel):
-    def __init__(self, parent, notebook, title, invoice=None):
+    def __init__(self, parent, notebook, title, item=None):
         super().__init__(parent)
         self.title(title)
         self.title_str = title
@@ -135,7 +23,7 @@ class InvoiceDialog(tk.Toplevel):
         self.conn = parent.conn
         self.parent = parent
         self.notebook = notebook
-        self.id = invoice.id if invoice != None else None
+        self.id = item.id if item != None else None
 
         # Create UI elements to enter invoice details
         label_frame = tk.LabelFrame(self, text="Invoice Details")
@@ -258,8 +146,8 @@ class InvoiceDialog(tk.Toplevel):
         cancel_button.pack()
 
         # Populate the dialog with invoice data if editing
-        if invoice:
-            self.populate_fields(invoice)
+        if item:
+            self.populate_fields(item)
 
     def select_file(self):
         file_path = tk.filedialog.askopenfilename()
@@ -317,14 +205,14 @@ class InvoiceDialog(tk.Toplevel):
         # self.result = invoice
         recorded_invoice = utils.fetch_invoice_by_id(self.conn, invoice.id)
         insert_new_operation = False
-        if invoice and self.title_str == "Add Invoice":
+        if invoice and self.title_str == "Add_Item":
             invoice.id = utils.insert_invoice(self.conn, invoice)
             self.parent.populate_treeview()
             # Create a new operation
             if invoice.as_paying_account()   \
                and invoice.is_paid():
                 insert_new_operation = True
-        elif invoice and self.title_str == "Edit Invoice":
+        elif invoice and self.title_str == "Edit_Item":
             # update invoice
             utils.update_invoice(self.conn, invoice)
             self.parent.populate_treeview()

@@ -93,12 +93,12 @@ def fetch_account_by_description(conn, description):
 
 def insert_account(conn, account):
     c = conn.cursor()
-    c.execute("INSERT INTO accounts (description, bank_name, account_number) VALUES (?, ?, ?)", (account.description, account.bank_name, account.account_number))
+    c.execute("INSERT INTO accounts (description, bank_name, account_number) VALUES (?, ?, ?)", (account.description, account.bank_name, account.iban))
     conn.commit()
 
 def update_account(conn, account):
     c = conn.cursor()
-    c.execute("UPDATE accounts SET description=?, bank_name=?, account_number=? WHERE id=?", (account.description, account.bank_name, account.account_number, account.id))
+    c.execute("UPDATE accounts SET description=?, bank_name=?, account_number=? WHERE id=?", (account.description, account.bank_name, account.iban, account.id))
     conn.commit()
 
 def update_operation_outcome_from_invoice(conn, invoice):

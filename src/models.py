@@ -2,11 +2,11 @@ import sqlite3
 from datetime import date
 
 class Account:
-    def __init__(self, id=None, description="", bank_name="", account_number=""):
+    def __init__(self, id=None, description="", bank_name="", iban=""):
         self.id = id
         self.description = description
         self.bank_name = bank_name
-        self.account_number = account_number
+        self.iban = iban
 
 class Invoice:
     def __init__(self, id=None, primary_receiver="", receiver_name="", receiver_address="", receiver_account="", primary_reference="", secondary_reference="", invoice_date="", due_date="", paid_date="", amount=0, paying_account_id=None, file_path="", remark="", description="", note="", tag="", category=""):
@@ -45,4 +45,5 @@ class Operation:
         self.account_id = account_id
         self.invoice_id = invoice_id
         self.type = type
+        self.file_path = ""
 

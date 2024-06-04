@@ -3,98 +3,26 @@ from tkinter import ttk
 from datetime import datetime
 from models import Operation
 import utils
-from my_treeview import MyTreeview
 import validation
 import format
+from base_view import BaseView
 
 
-class OperationsView(tk.Frame):
+class OperationsView(BaseView):
     def __init__(self, parent, conn, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
-        self.conn = conn
+        columns = ("id", "paid_date", "type", "income", "outcome", "account_id", "invoice_id", "file_path")
+        dialog_class = OperationDialog
+        delete_func = utils.delete_operation
+        columns_names = ("id", "paid_date", "type", "income", "outcome", "account name", "invoice ref", "file_path")
+        super().__init__(parent, conn, "operations", columns, columns_names, dialog_class, delete_func, *args, **kwargs)
 
-        # Create UI elements
-        self.checkbox_vars = {}
-        self.filter_frame = tk.Frame(self)
-        self.filter_frame.pack(side="top", fill="x")
 
-        # Fetch distinct account descriptions
-        self.account_descriptions = [account.description for account in utils.fetch_accounts(self.conn)]
-        for account_desc in self.account_descriptions:
-            var = tk.BooleanVar(value=True)
-            chk = tk.Checkbutton(self.filter_frame, text=account_desc, variable=var, command=self.populate_treeview)
-            chk.pack(side="left")
-            self.checkbox_vars[account_desc] = var
+        super().add_checkboxes_filter(filter_on="account",
+                                   record_to_thick_list=utils.fetch_accounts(self.conn),
+                                   text_attribute="description",
+                                   variable_attribute="id",
+                                   item_linked_attribute="account_id")
 
-        self.tree = MyTreeview(self, columns=("id", "paid_date", "type", "income", "outcome", "account", "invoice", "file_path"), show="headings")
-        self.tree.pack(side="top", fill="both", expand=True)
-
-        # Configure columns
-        self.tree.heading("id", text="ID")
-        self.tree.heading("paid_date", text="Paid")
-        self.tree.heading("type", text="Type")
-        self.tree.heading("income", text="Income")
-        self.tree.heading("outcome", text="Outcome")
-        self.tree.heading("account", text="Account")
-        self.tree.heading("invoice", text="Invoice ref")
-        self.tree.heading("file_path", text="File Path")
-
-        # Add buttons
-        button_frame = tk.Frame(self)
-        button_frame.pack(side="bottom", fill="x")
-
-        add_button = tk.Button(button_frame, text="Add", command=self.add_operation)
-        add_button.pack(side="left")
-
-        edit_button = tk.Button(button_frame, text="Edit", command=self.edit_operation)
-        edit_button.pack(side="left")
-
-        delete_button = tk.Button(button_frame, text="Delete", command=self.delete_operation)
-        delete_button.pack(side="left")
-                
-        # Add Customized Account Closure button
-        customized_closure_button = tk.Button(button_frame, text="Add Customized Account Closure", command=self.add_customized_account_closure)
-        customized_closure_button.pack(side="left")
-
-        # Labels for total income, outcome, and difference
-        self.total_frame = tk.Frame(self)
-        self.total_frame.pack(side="bottom", fill="x")
-
-        self.total_income_label = tk.Label(self.total_frame, text="Total Income: 0.00")
-        self.total_income_label.pack(side="left", padx=10)
-
-        self.total_outcome_label = tk.Label(self.total_frame, text="Total Outcome: 0.00")
-        self.total_outcome_label.pack(side="left", padx=10)
-
-        self.total_difference_label = tk.Label(self.total_frame, text="Difference: 0.00")
-        self.total_difference_label.pack(side="left", padx=10)
-
-        # Populate the treeview
-        self.populate_treeview()
-
-        # Bind selection event to update totals
-        self.tree.bind("<<TreeviewSelect>>", self.update_totals)
-
-        # Bind double-click event to open file
-        self.tree.bind("<Double-1>", self.open_file)
-
-    def update_totals(self, event):
-        selected_items = self.tree.selection()
-        total_income = 0
-        total_outcome = 0
-
-        for item in selected_items:
-            values = self.tree.item(item, "values")
-            income = float(values[3]) if values[3] else 0
-            outcome = float(values[4]) if values[4] else 0
-            total_income += income
-            total_outcome += outcome
-
-        difference = total_income - total_outcome
-
-        self.total_income_label.config(text=f"Total Income: {total_income:.2f}")
-        self.total_outcome_label.config(text=f"Total Outcome: {total_outcome:.2f}")
-        self.total_difference_label.config(text=f"Difference: {difference:.2f}")
 
     def add_customized_account_closure(self):
         selected = self.tree.focus()
@@ -143,74 +71,16 @@ class OperationsView(tk.Frame):
         utils.insert_operation(self.conn, new_operation)
         self.populate_treeview()
 
-    def populate_treeview(self):
-        # Clear the treeview
-        self.tree.delete(*self.tree.get_children())
-
-        # Fetch operations from the database
-        operations = utils.fetch_operations(self.conn)
-
-        # Filter operations based on selected checkboxes
-        selected_accounts = [desc for desc, var in self.checkbox_vars.items() if var.get()]
-        if selected_accounts:
-            filtered_operations = [op for op in operations if utils.fetch_account_by_id(self.conn, op.account_id).description in selected_accounts]
-
-            # Insert operations into the treeview
-            total_income = 0
-            total_outcome = 0
-            for operation in filtered_operations:
-                account = utils.fetch_account_by_id(self.conn, operation.account_id)
-                invoice = utils.fetch_invoice_by_id(self.conn, operation.invoice_id)
-                self.tree.insert("", "end", values=(operation.id, operation.paid_date, operation.type, operation.income, operation.outcome, account.description if account else "", invoice.primary_reference if invoice else "", invoice.file_path if invoice else ""))
-                total_income += operation.income
-                total_outcome += operation.outcome
-
-            # Add a row to display the total balance
-            self.tree.insert("", "end", values=("----------->", "----------->", "actual sold", total_income, total_outcome, f"Total Balance: {(total_income - total_outcome):.2f} CHF", "", ""))
-
-    def add_operation(self):
-        # Open a dialog to enter operation details
-        dialog = OperationDialog(self, title="Add Operation")
-
-    def edit_operation(self):
-        # Retrieve the selected operation from the treeview
-        selected = self.tree.focus()
-        if selected:
-            operation_id = self.tree.item(selected)["values"][0]
-            operation = utils.fetch_operation_by_id(self.conn, operation_id)
-            dialog = OperationDialog(self, title="Edit Operation", operation=operation)
-            if dialog.result:
-                utils.update_operation(self.conn, dialog.result)
-                self.populate_treeview()
-
-    def delete_operation(self):
-        # Retrieve the selected operation from the treeview
-        selected = self.tree.focus()
-        if selected:
-            operation_id = self.tree.item(selected)["values"][0]
-            utils.delete_operation(self.conn, operation_id)
-            self.populate_treeview()
-
-    def open_file(self, event):
-        # Retrieve the selected item from the treeview
-        selected_item = self.tree.focus()
-        if selected_item:
-            # Get the file path from the selected item
-            file_path = self.tree.set(selected_item, "file_path")
-            if file_path:
-                # Open the file
-                utils.open_file(file_path)
-
-
 class OperationDialog(tk.Toplevel):
-    def __init__(self, parent, title, operation=None):
+    def __init__(self, parent, notebook, title, item=None):
         super().__init__(parent)
         self.title(title)
         self.title_str = title
-        self.parent = parent
         self.result = None
         self.conn = parent.conn
-        self.id = operation.id if operation != None else None
+        self.parent = parent
+        self.notebook = notebook
+        self.id = item.id if item != None else None
 
         # Create UI elements to enter operation details
         label_frame = tk.LabelFrame(self, text="Operation Details")
@@ -268,8 +138,8 @@ class OperationDialog(tk.Toplevel):
         cancel_button.pack()
 
         # Populate the dialog with operation data if editing
-        if operation:
-            self.populate_fields(operation)
+        if item:
+            self.populate_fields(item)
 
     def save(self):
         if not self.validate_fields():
@@ -294,10 +164,10 @@ class OperationDialog(tk.Toplevel):
         )
 
         self.result = operation
-        if self.result and self.title_str == "Add Operation":
+        if self.result and self.title_str == "Add_Item":
             utils.insert_operation(self.conn, self.result)
             self.parent.populate_treeview()
-        elif self.result and self.title_str == "Edit Operation":
+        elif self.result and self.title_str == "Edit_Item":
             utils.update_operation(self.conn, self.result)
             self.parent.populate_treeview()
         self.destroy()
@@ -324,8 +194,6 @@ class OperationDialog(tk.Toplevel):
             tk.messagebox.showerror("Error", f"type '{op_type}' is not on in the allowed types list: {Operation.op_types}")
             return False
         
-        
-
         return True
 
     def get_account_id(self):
@@ -361,3 +229,4 @@ class OperationDialog(tk.Toplevel):
             if invoice.id == invoice_id:
                 return invoice.primary_reference
         return None
+
