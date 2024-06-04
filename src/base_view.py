@@ -36,7 +36,7 @@ class BaseView(tk.Frame):
         edit_button = tk.Button(button_frame, text="Edit", command=self.edit_item)
         edit_button.pack(side="left")
 
-        delete_button = tk.Button(button_frame, text="Delete", command=self.delete_item)
+        delete_button = tk.Button(button_frame, text="Delete", command=self.delete_items)
         delete_button.pack(side="left")
 
         # Add a search entry and filter button
@@ -77,8 +77,6 @@ class BaseView(tk.Frame):
             items = utils.fetch_operations(self.conn)
         elif self.view_name == "accounts":
             items = utils.fetch_accounts(self.conn)
-
-        
 
         self.insert_rows(items)
 
@@ -181,13 +179,14 @@ class BaseView(tk.Frame):
                 # Re-populate the treeview
                 self.populate_treeview()
 
-    def delete_item(self):
-        # Retrieve the selected item from the treeview
-        selected = self.tree.focus()
-        if selected:
-            item_id = self.tree.item(selected)["values"][0]
-            # Delete the item from the database
-            self.delete_func(self.conn, item_id)
+    def delete_items(self):
+        # Retrieve the selected items from the treeview
+        selected_items = self.tree.selection()
+        if selected_items:
+            # Iterate through the selected items and delete them from the database
+            for item in selected_items:
+                item_id = self.tree.item(item)["values"][0]
+                self.delete_func(self.conn, item_id)
             # Re-populate the treeview
             self.populate_treeview()
 

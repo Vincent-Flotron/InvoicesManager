@@ -86,7 +86,7 @@ class OperationDialog(tk.Toplevel):
         label_frame = tk.LabelFrame(self, text="Operation Details")
         label_frame.pack(pady=10, padx=10)
 
-        # Income
+        # Paid date
         paid_date_label = tk.Label(label_frame, text="Paid date:")
         paid_date_label.grid(row=0, column=0, sticky="w")
         self.paid_date_entry = tk.Entry(label_frame)

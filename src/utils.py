@@ -212,7 +212,9 @@ def fetch_operation_by_invoice_id(conn, invoice_id):
     rows = c.fetchall()
     if len(rows) > 1:
         raise Exception(f"Error: more than one operation for the invoice with id '{invoice_id}'")
-    row = rows[0]
+    row = None
+    if rows:
+        row = rows[0]
     if row:
         return Operation(*row)
     return None

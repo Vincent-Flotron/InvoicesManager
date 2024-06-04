@@ -30,7 +30,10 @@ class Invoice:
         self.category = category
 
     def is_paid(self):
-        return self.paid_date == True
+        if self.paid_date:
+            return True
+        else:
+            return False
     
     def as_paying_account(self):
         return self.paying_account_id != None
