@@ -10,10 +10,10 @@ from base_view import BaseView
 
 class OperationsView(BaseView):
     def __init__(self, parent, conn, *args, **kwargs):
-        fields_for_columns = ("id", "paid_date", "type", "income", "outcome", "account_id", "", "invoice_id", "file_path")
+        fields_for_columns = ("id", "paid_date", "type", "income", "outcome", "remain", "account_id", "", "invoice_id", "file_path")
         dialog_class = OperationDialog
         delete_func = utils.delete_operation
-        columns_names = ("id", "paid_date", "type", "income", "outcome", "account name", "receiver", "invoice ref", "file_path")
+        columns_names = ("id", "paid_date", "type", "income", "outcome", "remain", "account name", "receiver", "invoice ref", "file_path")
         super().__init__(parent, conn, "operations", fields_for_columns, columns_names, dialog_class, delete_func, *args, **kwargs)
 
 

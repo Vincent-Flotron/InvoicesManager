@@ -217,7 +217,7 @@ class InvoiceDialog(tk.Toplevel):
             utils.update_invoice(self.conn, invoice)
             self.parent.populate_treeview()
 
-            # Update relative operation if exists
+            # Update related operation if exists
             related_operation_was_updated = self.update_related_operation(recorded_invoice, invoice)
 
             # Create a new operation
@@ -240,16 +240,26 @@ class InvoiceDialog(tk.Toplevel):
         self.destroy()
 
     def update_related_operation(self, recorded_invoice, invoice):
+        relative_operation = utils.fetch_operation_by_invoice_id(self.conn, invoice.id)
         has_relative_operation = False
         account_is_changing = recorded_invoice.paying_account_id != invoice.paying_account_id
         amount_is_changing = recorded_invoice.amount != invoice.amount
-        relative_operation = utils.fetch_operation_by_invoice_id(self.conn, invoice.id)
+        paid_date_is_changing = recorded_invoice.paid_date != invoice.paid_date
         if relative_operation:
-            if account_is_changing and invoice.is_paid():
+            if account_is_changing:
                 utils.update_operation_account_from_invoice(self.conn, invoice)
-            if amount_is_changing and invoice.is_paid():
+            if amount_is_changing:
                 utils.update_operation_outcome_from_invoice(self.conn, invoice)
+            if paid_date_is_changing:
+                utils.update_operation_paid_date_from_invoice(self.conn, invoice)
             has_relative_operation = True
+
+            if not invoice.paying_account_id \
+             or not invoice.amount           \
+             or not invoice.paid_date:
+                utils.delete_operation(self.conn, relative_operation.id)
+                has_relative_operation = False
+
         return has_relative_operation
 
     def validate_fields(self):

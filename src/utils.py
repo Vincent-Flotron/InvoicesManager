@@ -128,6 +128,32 @@ def update_operation_outcome_from_invoice(conn, invoice):
 
     conn.commit()
 
+
+def update_operation_paid_date_from_invoice(conn, invoice):
+    """
+    Update the operation's paid date associated with an invoice.
+
+    Args:
+        conn (sqlite3.Connection): The SQLite database connection.
+        invoice (Invoice): The invoice object that has been paid.
+    """
+    c = conn.cursor()
+
+    # Check if an operation already exists for the invoice
+    c.execute("SELECT id FROM operations WHERE invoice_id = ?", (invoice.id,))
+    existing_operation = c.fetchone()
+
+    if existing_operation:
+        # Update the existing operation
+        operation_id = existing_operation[0]
+        c.execute("UPDATE operations SET paid_date = ? WHERE id = ?", (invoice.paid_date, operation_id))
+    else:
+        # Insert a new operation
+        c.execute("INSERT INTO operations (outcome, account_id, invoice_id) VALUES (?, ?, ?)",
+                  (invoice.amount, invoice.paying_account_id, invoice.id))
+
+    conn.commit()
+
 def update_operation_account_from_invoice(conn, invoice):
     """
     Update the operation associated with an invoice when the invoice is paid.
@@ -148,10 +174,10 @@ def update_operation_account_from_invoice(conn, invoice):
         # Update the existing operation
         operation_id = existing_operation[0]
         c.execute("UPDATE operations SET account_id = ? WHERE id = ?", (invoice.paying_account_id, operation_id))
-    else:
-        # Insert a new operation
-        c.execute("INSERT INTO operations (outcome, account_id, invoice_id) VALUES (?, ?, ?)",
-                  (invoice.amount, invoice.paying_account_id, invoice.id))
+    # else:
+    #     # Insert a new operation
+    #     c.execute("INSERT INTO operations (outcome, account_id, invoice_id) VALUES (?, ?, ?)",
+    #               (invoice.amount, invoice.paying_account_id, invoice.id))
 
     conn.commit()
 
@@ -164,7 +190,7 @@ def delete_account(conn, account_id):
 # Operations
 def fetch_operations(conn):
     c = conn.cursor()
-    c.execute("SELECT * FROM operations")
+    c.execute("SELECT * FROM operations ORDER BY paid_date")
     rows = c.fetchall()
     operations = []
     for row in rows:
