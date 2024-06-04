@@ -128,8 +128,6 @@ class OperationsView(tk.Frame):
             for operation in filtered_operations:
                 account = utils.fetch_account_by_id(self.conn, operation.account_id)
                 invoice = utils.fetch_invoice_by_id(self.conn, operation.invoice_id)
-                if operation.income > 0:
-                    debug = 0
                 self.tree.insert("", "end", values=(operation.id, operation.paid_date, operation.type, operation.income, operation.outcome, account.description if account else "", invoice.primary_reference if invoice else "", invoice.file_path if invoice else ""))
                 total_income += operation.income
                 total_outcome += operation.outcome
