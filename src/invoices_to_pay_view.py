@@ -8,11 +8,11 @@ from base_view import BaseView
 
 class InvoicesToPayView(BaseView):
     def __init__(self, parent, conn, *args, **kwargs):
-        columns = ("id", "primary_receiver", "receiver_name", "receiver_address", "receiver_account", "primary_reference", "secondary_reference", "invoice_date", "due_date", "paid_date", "amount", "file_path")
+        fields_for_columns = ("id", "primary_receiver", "receiver_name", "receiver_address", "receiver_account", "primary_reference", "secondary_reference", "invoice_date", "due_date", "paid_date", "amount", "file_path")
         dialog_class = InvoiceDialog
         delete_func = utils.delete_invoice
-        columns_names = columns
-        super().__init__(parent, conn, "invoices_to_pay", columns, columns_names, dialog_class, delete_func, *args, **kwargs)
+        columns_names = fields_for_columns
+        super().__init__(parent, conn, "invoices_to_pay", fields_for_columns, columns_names, dialog_class, delete_func, *args, **kwargs)
 
 class InvoiceDialog(tk.Toplevel):
     def __init__(self, parent, notebook, title, item=None):

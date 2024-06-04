@@ -85,13 +85,14 @@ class BaseView(tk.Frame):
     def insert_rows(self, items):
         # Insert items into the treeview
         for item in items:
-            values = [getattr(item, col) for col in self.columns]
+            values = [getattr(item, col) if hasattr(item, col) else '' for col in self.columns]
             if self.view_name == "operations" and item.invoice_id:
                 invoice = utils.fetch_invoice_by_id(self.conn, item.invoice_id)
                 account = utils.fetch_account_by_id(self.conn, item.account_id)
                 values[5] = account.description
-                values[6] = invoice.primary_reference
-                values[7] = invoice.file_path
+                values[6] = invoice.primary_receiver
+                values[7] = invoice.primary_reference
+                values[8] = invoice.file_path
             self.tree.insert("", "end", values=values)
 
         # Add a row to display the total balance for the operations view

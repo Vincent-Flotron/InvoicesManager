@@ -7,11 +7,11 @@ from base_view import BaseView
 
 class AccountsView(BaseView):
     def __init__(self, parent, conn, *args, **kwargs):
-        columns = ("id", "description", "bank_name", "iban")
+        fields_for_columns = ("id", "description", "bank_name", "iban")
         dialog_class = AccountDialog
         delete_func = utils.delete_account
-        columns_names = columns
-        super().__init__(parent, conn, "accounts", columns, columns_names, dialog_class, delete_func, *args, **kwargs)
+        columns_names = fields_for_columns
+        super().__init__(parent, conn, "accounts", fields_for_columns, columns_names, dialog_class, delete_func, *args, **kwargs)
 
     def populate_treeview(self):
         # Clear the treeview
