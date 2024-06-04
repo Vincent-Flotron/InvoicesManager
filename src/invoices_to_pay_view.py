@@ -46,11 +46,16 @@ class InvoicesToPayView(tk.Frame):
         filter_button = tk.Button(search_frame, text="Filter", command=self.filter_invoices)
         filter_button.pack(side="right")
 
+        # Label to display the sum of selected invoices
+        self.sum_label = tk.Label(self, text="Sum of selected invoices: 0.00")
+        self.sum_label.pack(side="top", fill="x")
+
         # Populate the treeview
         self.populate_treeview()
         
-        # Bind double-click event to open file
+        # Bind events
         self.tree.bind("<Double-1>", self.open_file)
+        self.tree.bind("<<TreeviewSelect>>", self.update_sum)
 
     def populate_treeview(self, invoices=None):
         # Clear the treeview
@@ -111,6 +116,14 @@ class InvoicesToPayView(tk.Frame):
             if file_path:
                 # Open the file
                 utils.open_file(file_path)
+
+    def update_sum(self, event):
+        selected_items = self.tree.selection()
+        total_sum = 0.0
+        for item in selected_items:
+            amount = self.tree.item(item, "values")[10]  # Assuming amount is in the 10th column
+            total_sum += float(amount)
+        self.sum_label.config(text=f"Sum of selected invoices: {total_sum:.2f}")
 
 
 class InvoiceDialog(tk.Toplevel):

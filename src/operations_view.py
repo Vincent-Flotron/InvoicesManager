@@ -56,12 +56,45 @@ class OperationsView(tk.Frame):
         customized_closure_button = tk.Button(button_frame, text="Add Customized Account Closure", command=self.add_customized_account_closure)
         customized_closure_button.pack(side="left")
 
+        # Labels for total income, outcome, and difference
+        self.total_frame = tk.Frame(self)
+        self.total_frame.pack(side="bottom", fill="x")
+
+        self.total_income_label = tk.Label(self.total_frame, text="Total Income: 0.00")
+        self.total_income_label.pack(side="left", padx=10)
+
+        self.total_outcome_label = tk.Label(self.total_frame, text="Total Outcome: 0.00")
+        self.total_outcome_label.pack(side="left", padx=10)
+
+        self.total_difference_label = tk.Label(self.total_frame, text="Difference: 0.00")
+        self.total_difference_label.pack(side="left", padx=10)
 
         # Populate the treeview
         self.populate_treeview()
 
+        # Bind selection event to update totals
+        self.tree.bind("<<TreeviewSelect>>", self.update_totals)
+
         # Bind double-click event to open file
         self.tree.bind("<Double-1>", self.open_file)
+
+    def update_totals(self, event):
+        selected_items = self.tree.selection()
+        total_income = 0
+        total_outcome = 0
+
+        for item in selected_items:
+            values = self.tree.item(item, "values")
+            income = float(values[3]) if values[3] else 0
+            outcome = float(values[4]) if values[4] else 0
+            total_income += income
+            total_outcome += outcome
+
+        difference = total_income - total_outcome
+
+        self.total_income_label.config(text=f"Total Income: {total_income:.2f}")
+        self.total_outcome_label.config(text=f"Total Outcome: {total_outcome:.2f}")
+        self.total_difference_label.config(text=f"Difference: {difference:.2f}")
 
     def add_customized_account_closure(self):
         selected = self.tree.focus()
