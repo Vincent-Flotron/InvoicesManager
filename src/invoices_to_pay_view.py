@@ -19,13 +19,13 @@ class InvoiceDialog(tk.Toplevel):
     def __init__(self, parent, notebook, title, item=None):
         super().__init__(parent)
         self.title(title)
-        self.title_str = title
-        self.result = None
-        self.conn = parent.conn
-        self.parent = parent
-        self.notebook = notebook
-        self.many_items = type(item) is list
-        self.id = item.id if item != None else None
+        self.title_str   = title
+        self.result      = None
+        self.conn        = parent.conn
+        self.parent      = parent
+        self.notebook    = notebook
+        self.many_items  = type(item) is list
+        self.id          = item.id if item != None else None
 
         # Create UI elements to enter invoice details
         label_frame = tk.LabelFrame(self, text="Invoice Details")
@@ -42,7 +42,7 @@ class InvoiceDialog(tk.Toplevel):
         self.entries_labels.make_entry_label("Receiver Address", "receiver_address")
 
         # Receiver Account
-        self.entries_labels.make_entry_label("Receiver Account", "receiver_account")        
+        self.entries_labels.make_entry_label("Receiver Account", "receiver_account")
 
         # Primary Reference
         self.entries_labels.make_entry_label("Primary Reference", "primary_reference")
@@ -134,85 +134,38 @@ class InvoiceDialog(tk.Toplevel):
         category            = self.entries_labels.entries['category'].get()
 
         invoice = Invoice(
-            id = id,
-            primary_receiver=primary_receiver,
-            receiver_name=receiver_name,
-            receiver_address=receiver_address,
-            receiver_account=receiver_account,
-            primary_reference=primary_reference,
-            secondary_reference=secondary_reference,
-            invoice_date=invoice_date,
-            due_date=due_date,
-            paid_date=paid_date,
-            amount=amount,
-            paying_account_id=paying_account_id,
-            file_path=file_path,
-            remark=remark,
-            description=description,
-            note=note,
-            tag=tag,
-            category=category
+            id                  = id,
+            primary_receiver    = primary_receiver,
+            receiver_name       = receiver_name,
+            receiver_address    = receiver_address,
+            receiver_account    = receiver_account,
+            primary_reference   = primary_reference,
+            secondary_reference = secondary_reference,
+            invoice_date        = invoice_date,
+            due_date            = due_date,
+            paid_date           = paid_date,
+            amount              = amount,
+            paying_account_id   = paying_account_id,
+            file_path           = file_path,
+            remark              = remark,
+            description         = description,
+            note                = note,
+            tag                 = tag,
+            category            = category
         )
 
-        # self.result = invoice
-        recorded_invoice = utils.fetch_invoice_by_id(self.conn, invoice.id)
-        insert_new_operation = False
         if invoice and self.title_str == "Add_Item":
-            invoice.id = utils.insert_invoice(self.conn, invoice)
+            utils.insert_invoice(self.conn, invoice)
             self.parent.populate_treeview()
-            # Create a new operation
-            if invoice.as_paying_account()   \
-               and invoice.is_paid():
-                insert_new_operation = True
         elif invoice and self.title_str == "Edit_Item":
             # update invoice
             utils.update_invoice(self.conn, invoice)
             self.parent.populate_treeview()
 
-            # Update related operation if exists
-            related_operation_was_updated = self.update_related_operation(recorded_invoice, invoice)
-
-            # Create a new operation
-            if not related_operation_was_updated \
-               and invoice.as_paying_account()   \
-               and invoice.is_paid():
-                insert_new_operation = True
-        if insert_new_operation:
-            operation = Operation(
-                            type='invoice',
-                            paid_date=invoice.paid_date,
-                            income=0,
-                            outcome=invoice.amount,
-                            account_id=invoice.paying_account_id,
-                            invoice_id=invoice.id
-                        )
-            utils.insert_operation(self.conn, operation)
         # Update operations view
         self.notebook.children["!operationsview"].populate_treeview()
         self.destroy()
 
-    def update_related_operation(self, recorded_invoice, invoice):
-        relative_operation = utils.fetch_operation_by_invoice_id(self.conn, invoice.id)
-        has_relative_operation = False
-        account_is_changing = recorded_invoice.paying_account_id != invoice.paying_account_id
-        amount_is_changing = recorded_invoice.amount != invoice.amount
-        paid_date_is_changing = recorded_invoice.paid_date != invoice.paid_date
-        if relative_operation:
-            if account_is_changing:
-                utils.update_operation_account_from_invoice(self.conn, invoice)
-            if amount_is_changing:
-                utils.update_operation_outcome_from_invoice(self.conn, invoice)
-            if paid_date_is_changing:
-                utils.update_operation_paid_date_from_invoice(self.conn, invoice)
-            has_relative_operation = True
-
-            if not invoice.paying_account_id \
-             or not invoice.amount           \
-             or not invoice.paid_date:
-                utils.delete_operation(self.conn, relative_operation.id)
-                has_relative_operation = False
-
-        return has_relative_operation
 
     def validate_fields(self):
         # if not self.primary_receiver_entry.get():
@@ -236,13 +189,13 @@ class InvoiceDialog(tk.Toplevel):
         if not self.get_paying_account_id():
             tk.messagebox.showerror("Error", f"Paying account '{paying_account}' doesn't exist.")
             return False
-        
+
         # paid_date = self.paid_date_entry.get()
         paid_date = self.entries_labels.entries['paid_date'].get()
         if paid_date and not validation.date_is_valid(paid_date):
             tk.messagebox.showerror("Error", f"paid_date '{paid_date}' is not on format YYYY.MM.DD or YY.M.D or YYYY-MM-DD or YY-M-D.")
             return False
-        
+
         # due_date = self.due_date_entry.get()
         due_date = self.entries_labels.entries['due_date'].get()
         if due_date and not validation.date_is_valid(due_date):
@@ -267,7 +220,7 @@ class InvoiceDialog(tk.Toplevel):
 
     def populate_fields(self, invoice):
         self.entries_labels.enable_all()
-    
+
         self.entries_labels.entries['primary_receiver'].insert(0, invoice.primary_receiver)
         self.entries_labels.entries['receiver_name'].insert(0, invoice.receiver_name)
         self.entries_labels.entries['receiver_address'].insert(0, invoice.receiver_address)

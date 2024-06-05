@@ -6,7 +6,7 @@ import subprocess
 import shutil
 
 def create_tables(conn):
-    c = conn.cursor()
+    c = get_cursor(conn)
     c.execute("""CREATE TABLE IF NOT EXISTS accounts
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, description TEXT, bank_name TEXT, account_number TEXT UNIQUE)""")
     c.execute("""CREATE TABLE IF NOT EXISTS invoices
@@ -16,11 +16,12 @@ def create_tables(conn):
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, paid_date TEXT, income REAL DEFAULT 0, outcome REAL DEFAULT 0, account_id INTEGER, invoice_id INTEGER, 
                  FOREIGN KEY(account_id) REFERENCES accounts(id), 
                  FOREIGN KEY(invoice_id) REFERENCES invoices(id))""")
-    conn.commit()
+    commit_if_connection(conn)
+
 
 # Invoices
 def fetch_invoices(conn):
-    c = conn.cursor()
+    c = get_cursor(conn)
     c.execute("SELECT * FROM invoices")
     rows = c.fetchall()
     invoices = []
@@ -30,7 +31,7 @@ def fetch_invoices(conn):
     return invoices
 
 def fetch_invoice_by_id(conn, invoice_id):
-    c = conn.cursor()
+    c = get_cursor(conn)
     c.execute("SELECT * FROM invoices WHERE id=?", (invoice_id,))
     row = c.fetchone()
     if row:
@@ -38,25 +39,63 @@ def fetch_invoice_by_id(conn, invoice_id):
     return None
 
 def insert_invoice(conn, invoice):
-    c = conn.cursor()
+    c = get_cursor(conn)
     c.execute("INSERT INTO invoices (primary_receiver, receiver_name, receiver_address, receiver_account, primary_reference, secondary_reference, invoice_date, due_date, paid_date, amount, paying_account_id, file_path, remark, description, note, tag, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (invoice.primary_receiver, invoice.receiver_name, invoice.receiver_address, invoice.receiver_account, invoice.primary_reference, invoice.secondary_reference, invoice.invoice_date, invoice.due_date, invoice.paid_date, invoice.amount, invoice.paying_account_id, invoice.file_path, invoice.remark, invoice.description, invoice.note, invoice.tag, invoice.category))
-    conn.commit()
+    invoice.id = c.lastrowid
+    # Create a new operation
+    if invoice.as_paying_account()   \
+        and invoice.is_paid():
+        insert_operation_from_invoice(conn.cursor(), invoice)
+    commit_if_connection(conn)
     return c.lastrowid
-    # if invoice.paid_date:
-    #     insert_operation(conn, Operation(outcome=invoice.amount, account_id=invoice.paying_account_id, invoice_id=c.lastrowid))
 
 def update_invoice(conn, invoice):
-    c = conn.cursor()
+    # c = conn.cursor()
+    c = get_cursor(conn)
     c.execute("UPDATE invoices SET primary_receiver=?, receiver_name=?, receiver_address=?, receiver_account=?, primary_reference=?, secondary_reference=?, invoice_date=?, due_date=?, paid_date=?, amount=?, paying_account_id=?, file_path=?, remark=?, description=?, note=?, tag=?, category=? WHERE id=?", (invoice.primary_receiver, invoice.receiver_name, invoice.receiver_address, invoice.receiver_account, invoice.primary_reference, invoice.secondary_reference, invoice.invoice_date, invoice.due_date, invoice.paid_date, invoice.amount, invoice.paying_account_id, invoice.file_path, invoice.remark, invoice.description, invoice.note, invoice.tag, invoice.category, invoice.id))
-    conn.commit()
+    # Update related operation if exists
+    recorded_invoice = fetch_invoice_by_id(conn.cursor(), invoice.id)
+    related_operation_was_updated = update_related_operation(conn.cursor(), recorded_invoice, invoice)
+
+    # Create a new operation
+    if not related_operation_was_updated \
+       and invoice.as_paying_account()   \
+       and invoice.is_paid():
+        insert_operation_from_invoice(conn.cursor(), invoice)
+
+    commit_if_connection(conn)
+
+def update_related_operation(conn, recorded_invoice, invoice):
+    relative_operation = fetch_operation_by_invoice_id(conn, invoice.id)
+    has_relative_operation = False
+    account_is_changing = recorded_invoice.paying_account_id != invoice.paying_account_id
+    amount_is_changing = recorded_invoice.amount != invoice.amount
+    paid_date_is_changing = recorded_invoice.paid_date != invoice.paid_date
+    if relative_operation:
+        if account_is_changing:
+            update_operation_account_from_invoice(conn, invoice)
+        if amount_is_changing:
+            update_operation_outcome_from_invoice(conn, invoice)
+        if paid_date_is_changing:
+            update_operation_paid_date_from_invoice(conn, invoice)
+        has_relative_operation = True
+
+        if not invoice.paying_account_id \
+            or not invoice.amount        \
+            or not invoice.paid_date:
+            delete_operation(conn, relative_operation.id)
+            has_relative_operation = False
+
+    commit_if_connection(conn)
+    return has_relative_operation
 
 def delete_invoice(conn, invoice_id):
-    c = conn.cursor()
+    c = get_cursor(conn)
     c.execute("DELETE FROM invoices WHERE id=?", (invoice_id,))
-    conn.commit()
+    commit_if_connection(conn)
 
 def filter_invoices(conn, search_term):
-    c = conn.cursor()
+    c = get_cursor(conn)
     c.execute("SELECT * FROM invoices WHERE primary_receiver LIKE ? OR receiver_name LIKE ? OR receiver_address LIKE ? OR receiver_account LIKE ? OR primary_reference LIKE ? OR secondary_reference LIKE ? OR description LIKE ? OR note LIKE ? OR tag LIKE ? OR category LIKE ?", ('%' + search_term + '%',) * 10)
     rows = c.fetchall()
     invoices = []
@@ -65,9 +104,10 @@ def filter_invoices(conn, search_term):
         invoices.append(invoice)
     return invoices
 
+
 # Accounts
 def fetch_accounts(conn):
-    c = conn.cursor()
+    c = get_cursor(conn)
     c.execute("SELECT * FROM accounts")
     rows = c.fetchall()
     accounts = []
@@ -77,29 +117,29 @@ def fetch_accounts(conn):
     return accounts
 
 def fetch_account_by_id(conn, account_id):
-    c = conn.cursor()
+    c = get_cursor(conn)
     c.execute("SELECT * FROM accounts WHERE id=?", (account_id,))
     row = c.fetchone()
     if row:
         return Account(*row)
     
 def fetch_account_by_description(conn, description):
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM accounts WHERE description = ?", (description,))
-    row = cursor.fetchone()
+    c = get_cursor(conn)
+    c.execute("SELECT * FROM accounts WHERE description = ?", (description,))
+    row = c.fetchone()
     if row:
         return Account(*row)
     return None
 
 def insert_account(conn, account):
-    c = conn.cursor()
+    c = get_cursor(conn)
     c.execute("INSERT INTO accounts (description, bank_name, account_number) VALUES (?, ?, ?)", (account.description, account.bank_name, account.iban))
-    conn.commit()
+    commit_if_connection(conn)
 
 def update_account(conn, account):
-    c = conn.cursor()
+    c = get_cursor(conn)
     c.execute("UPDATE accounts SET description=?, bank_name=?, account_number=? WHERE id=?", (account.description, account.bank_name, account.iban, account.id))
-    conn.commit()
+    commit_if_connection(conn)
 
 def update_operation_outcome_from_invoice(conn, invoice):
     """
@@ -111,7 +151,7 @@ def update_operation_outcome_from_invoice(conn, invoice):
     """
     if not invoice.is_paid:
         raise Exception("Invoice is not paid !")
-    c = conn.cursor()
+    c = get_cursor(conn)
 
     # Check if an operation already exists for the invoice
     c.execute("SELECT id FROM operations WHERE invoice_id = ?", (invoice.id,))
@@ -126,8 +166,7 @@ def update_operation_outcome_from_invoice(conn, invoice):
         c.execute("INSERT INTO operations (outcome, account_id, invoice_id) VALUES (?, ?, ?)",
                   (invoice.amount, invoice.paying_account_id, invoice.id))
 
-    conn.commit()
-
+    commit_if_connection(conn)
 
 def update_operation_paid_date_from_invoice(conn, invoice):
     """
@@ -137,7 +176,7 @@ def update_operation_paid_date_from_invoice(conn, invoice):
         conn (sqlite3.Connection): The SQLite database connection.
         invoice (Invoice): The invoice object that has been paid.
     """
-    c = conn.cursor()
+    c = get_cursor(conn)
 
     # Check if an operation already exists for the invoice
     c.execute("SELECT id FROM operations WHERE invoice_id = ?", (invoice.id,))
@@ -152,7 +191,7 @@ def update_operation_paid_date_from_invoice(conn, invoice):
         c.execute("INSERT INTO operations (outcome, account_id, invoice_id) VALUES (?, ?, ?)",
                   (invoice.amount, invoice.paying_account_id, invoice.id))
 
-    conn.commit()
+    commit_if_connection(conn)
 
 def update_operation_account_from_invoice(conn, invoice):
     """
@@ -164,7 +203,7 @@ def update_operation_account_from_invoice(conn, invoice):
     """
     if not invoice.is_paid:
         raise Exception("Invoice is not paid !")
-    c = conn.cursor()
+    c = get_cursor(conn)
 
     # Check if an operation already exists for the invoice
     c.execute("SELECT id FROM operations WHERE invoice_id = ?", (invoice.id,))
@@ -174,22 +213,16 @@ def update_operation_account_from_invoice(conn, invoice):
         # Update the existing operation
         operation_id = existing_operation[0]
         c.execute("UPDATE operations SET account_id = ? WHERE id = ?", (invoice.paying_account_id, operation_id))
-    # else:
-    #     # Insert a new operation
-    #     c.execute("INSERT INTO operations (outcome, account_id, invoice_id) VALUES (?, ?, ?)",
-    #               (invoice.amount, invoice.paying_account_id, invoice.id))
-
-    conn.commit()
-
+    commit_if_connection(conn)
 
 def delete_account(conn, account_id):
-    c = conn.cursor()
+    c = get_cursor(conn)
     c.execute("DELETE FROM accounts WHERE id=?", (account_id,))
-    conn.commit()
+    commit_if_connection(conn)
 
 # Operations
 def fetch_operations(conn):
-    c = conn.cursor()
+    c = get_cursor(conn)
     c.execute("SELECT * FROM operations ORDER BY paid_date")
     rows = c.fetchall()
     operations = []
@@ -199,7 +232,7 @@ def fetch_operations(conn):
     return operations
 
 def fetch_operation_by_id(conn, operations_id):
-    c = conn.cursor()
+    c = get_cursor(conn)
     c.execute("SELECT * FROM operations WHERE id=?", (operations_id,))
     row = c.fetchone()
     if row:
@@ -207,7 +240,7 @@ def fetch_operation_by_id(conn, operations_id):
     return None
 
 def fetch_operation_by_invoice_id(conn, invoice_id):
-    c = conn.cursor()
+    c = get_cursor(conn)
     c.execute("SELECT * FROM operations WHERE invoice_id=?", (invoice_id,))
     rows = c.fetchall()
     if len(rows) > 1:
@@ -220,33 +253,63 @@ def fetch_operation_by_invoice_id(conn, invoice_id):
     return None
 
 def fetch_operations_by_type(conn, operation_type):
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM operations WHERE type = ?", (operation_type,))
-    rows = cursor.fetchall()
+    c = get_cursor(conn)
+    c.execute("SELECT * FROM operations WHERE type = ?", (operation_type,))
+    rows = c.fetchall()
     return [Operation(*row) for row in rows]
 
+def insert_operation_from_invoice(conn, invoice):
+    operation = Operation(
+        type       = 'invoice',
+        paid_date  = invoice.paid_date,
+        income     = 0,
+        outcome    = invoice.amount,
+        account_id = invoice.paying_account_id,
+        invoice_id = invoice.id
+    )
+    insert_operation(conn, operation)
+    commit_if_connection(conn)
+
 def insert_operation(conn, operation):
-    c = conn.cursor()
+    c = get_cursor(conn)
     c.execute("INSERT INTO operations (paid_date, income, outcome, account_id, invoice_id, type) VALUES (?, ?, ?, ?, ?, ?)", (operation.paid_date, operation.income, operation.outcome, operation.account_id, operation.invoice_id, operation.type))
-    conn.commit()
+    commit_if_connection(conn)
     return None
 
 def update_operation(conn, operation):
-    c = conn.cursor()
+    c = get_cursor(conn)
     c.execute("UPDATE operations SET paid_date=?, income=?, outcome=?, account_id=?, invoice_id=?, type=? WHERE id=?", (operation.paid_date, operation.income, operation.outcome, operation.account_id, operation.invoice_id, operation.id, operation.type))
-    conn.commit()
+    commit_if_connection(conn)
 
 def delete_operation(conn, operation_id):
-    c = conn.cursor()
+    c = get_cursor(conn)
     c.execute("DELETE FROM operations WHERE id=?", (operation_id,))
-    conn.commit()
+    commit_if_connection(conn)
+
 
 # Balance
 def calculate_total_balance(conn):
-    c = conn.cursor()
+    c = get_cursor(conn)
     c.execute("SELECT SUM(income) AS total_income, SUM(outcome) AS total_outcome FROM operations")
     row = c.fetchone()
     return row[0] or 0, row[1] or 0
+
+
+# Transaction's management
+def get_cursor(conn):
+    _type = type(conn)
+    # Get cursor from connection
+    if _type == sqlite3.Connection:
+        return conn.cursor()
+    # Pass cursor
+    elif _type == sqlite3.Cursor:
+        return conn
+
+def commit_if_connection(conn):
+    _type = type(conn)
+    if _type == sqlite3.Connection:
+        conn.commit()
+
 
 # Linked documents
 def open_file(file_path):
