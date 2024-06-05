@@ -2,7 +2,7 @@ import tkinter as tk
 from datetime import datetime
 from models import Account
 import utils
-from base_view import BaseView
+from Views.base_view import BaseView
 
 
 class AccountsView(BaseView):

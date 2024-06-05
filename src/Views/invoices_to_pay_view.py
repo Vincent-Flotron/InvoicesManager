@@ -1,11 +1,13 @@
 import tkinter as tk
 from tkinter import ttk
-from models import Invoice, Operation
+from models import Invoice
 import utils
 import validation
 import format
-from base_view import BaseView
-from entry_label import EntryLabel
+from Views.base_view import BaseView
+from Dialog_elements.entry_label import EntryLabel
+from Dialog_elements.entries_builder import EntriesBuilder
+import Checks.check as check
 
 class InvoicesToPayView(BaseView):
     def __init__(self, parent, conn, *args, **kwargs):
@@ -31,6 +33,31 @@ class InvoiceDialog(tk.Toplevel):
         label_frame = tk.LabelFrame(self, text="Invoice Details")
         label_frame.pack(pady=10, padx=10)
         self.entries_labels = EntryLabel(label_frame, self.many_items)
+
+        self.entries_labels = EntriesBuilder(label_frame, self.many_items)
+        label_texts                = ["Primary Receiver",    "Receiver Name", "Receiver Address", "Receiver Account", "Primary Reference",
+                                      "Secondary Reference", "Invoice Date",  "Due Date",         "Paid Date",        "Amount",
+                                      "Paying Account",      "Remark",        "Description",      "Note",             "Tag",
+                                      "Category",            "File Path"                                                                     ]
+        entry_names                = ["primary_receiver",    "receiver_name", "receiver_address", "receiver_account", "primary_reference",
+                                      "secondary_reference", "invoice_date",  "due_date",         "paid_date",        "amount",
+                                      "paying_account",      "remark",        "description",      "note",             "tag",
+                                      "category",            "file_path"                                                                     ]
+        entry_types                = [tk.Entry,              tk.Entry,        tk.Entry,           tk.Entry,           tk.Entry,
+                                      tk.Entry,              tk.Entry,        tk.Entry,           tk.Entry,           tk.Entry,
+                                      ttk.Combobox,          tk.Entry,        tk.Entry,           tk.Entry,           tk.Entry,
+                                      tk.Entry,              tk.Entry                                                                        ]
+        checks_list                = [(check.IsRequired()),  (None),          (check.IsRequired()), (check.IsRequired()), (check.IsRequired()),
+                                      (None),                (check.IsRequired(), check.IsValidDate()),  (check.IsRequired(), check.IsValidDate()), (check.IsValidDate()), (check.IsFloat()),
+                                      (check.IsInTable("account", "description")), (None), (None), (None),            (None),
+                                      (None),                (None)                                                                          ]
+        allowed_when_multi_edition = [True,                  True,            ]
+        self.entries_labels.make_entries(label_texts, entry_names, entry_types, checks_list, allowed_when_multi_edition)
+
+        the_check = checks_list[0]("hola", "entry_hola")
+        res = the_check.check()
+        if res:
+            print(f"res: {res}")
 
         # Primary Receiver
         self.entries_labels.make_entry_label("Primary Receiver", "primary_receiver")
@@ -165,7 +192,7 @@ class InvoiceDialog(tk.Toplevel):
         # Update operations view
         self.notebook.children["!operationsview"].populate_treeview()
         self.destroy()
-
+        
 
     def validate_fields(self):
         # if not self.primary_receiver_entry.get():

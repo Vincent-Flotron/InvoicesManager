@@ -1,5 +1,5 @@
 import tkinter as tk
-from enable_entry import EnableEntry
+from Dialog_elements.enable_entry import EnableEntry
 
 class EntryLabel:
     def __init__(self, label_frame, many_items):
@@ -10,8 +10,8 @@ class EntryLabel:
         self.label_frame = label_frame
         self.states = []
         self.many_items = many_items
-
-    def make_entry_label(self, label_text, entry_name, entry_type=tk.Entry):
+        
+    def make_entry_label(self, label_text, entry_name, entry_type=tk.Entry, check_fonction=None, locked=False):
         self.labels[entry_name] = tk.Label(self.label_frame, text=f"{label_text}:")
         self.labels[entry_name].grid(row=self.row_nb, column=0, sticky="w")
         self.entries[entry_name] = entry_type(self.label_frame)
@@ -19,9 +19,12 @@ class EntryLabel:
         self.row_nb += 1
         # create the EnableEntry instance and set the default state
         self.enable_list.append(
-            EnableEntry( self.entries[entry_name],
-                         self.label_frame,
-                         enabled_by_default=not self.many_items )
+            EnableEntry(
+                entry              = self.entries[entry_name],
+                label_frame        = self.label_frame,
+                enabled_by_default = not self.many_items,
+                locked             = locked
+            )
         )
 
     def enable_all(self):

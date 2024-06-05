@@ -104,6 +104,12 @@ def filter_invoices(conn, search_term):
         invoices.append(invoice)
     return invoices
 
+# General
+def query(conn, query):
+    c = get_cursor(conn)
+    c.execute(query)
+    rows = c.fetchall()
+    return rows
 
 # Accounts
 def fetch_accounts(conn):

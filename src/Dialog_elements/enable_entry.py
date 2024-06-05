@@ -1,11 +1,12 @@
 import tkinter as tk
 
 class EnableEntry:
-    def __init__(self, entry, label_frame, enabled_by_default=True):
+    def __init__(self, entry, label_frame, enabled_by_default=True, locked=False):
         self.entry = entry
         self.label_frame = label_frame
         self.var = tk.BooleanVar()
         self.var.set(enabled_by_default)
+        self.locked = locked
 
         # grid the check button in the same row and column as the entry
         row = self.entry.grid_info()["row"]
@@ -27,7 +28,8 @@ class EnableEntry:
             self.disable_entry()
 
     def enable_entry(self):
-        self.entry.config(state="normal")
+        if not self.locked:
+            self.entry.config(state="normal")
     
     def disable_entry(self):
         self.entry.config(state="disabled")

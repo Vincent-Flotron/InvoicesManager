@@ -1,22 +1,18 @@
 import tkinter as tk
 from tkinter import ttk, filedialog
-import sqlite3
 import utils
-from operations_view import OperationsView
-from accounts_view import AccountsView
-from invoices_to_pay_view import InvoicesToPayView
-import os
+from Views.operations_view import OperationsView
+from Views.accounts_view import AccountsView
+from Views.invoices_to_pay_view import InvoicesToPayView
 
 
 class MainApp(tk.Tk):
-    def __init__(self):
+    def __init__(self, conn, absolute_db_path):
         super().__init__()
         self.title("Invoices to Pay Manager")
 
-        # Get the directory path of the current script
-        self.script_dir = os.path.dirname(os.path.abspath(__file__))
-        self.absolute_db_path = os.path.join(self.script_dir + "/..", "data/database.db")
-        self.conn = sqlite3.connect(self.absolute_db_path, check_same_thread=False)
+        self.absolute_db_path = absolute_db_path
+        self.conn             = conn
 
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill="both", expand=True)
@@ -48,6 +44,3 @@ class MainApp(tk.Tk):
         if backup_file:
             utils.restore_database(self.conn, backup_file, self.absolute_db_path)
 
-if __name__ == "__main__":
-    app = MainApp()
-    app.mainloop()
