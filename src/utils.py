@@ -137,6 +137,18 @@ def fetch_account_by_description(conn, description):
         return Account(*row)
     return None
 
+def get_account_description(conn, account_id):
+    for account in fetch_accounts(conn):
+        if account.id == account_id:
+            return account.description
+    return None
+
+def get_paying_account_id_from_descr(conn, account_description):
+    for account in fetch_accounts(conn):
+        if account.description == account_description:
+            return account.id
+    return None
+
 def insert_account(conn, account):
     c = get_cursor(conn)
     c.execute("INSERT INTO accounts (description, bank_name, account_number) VALUES (?, ?, ?)", (account.description, account.bank_name, account.iban))

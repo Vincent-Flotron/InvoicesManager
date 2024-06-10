@@ -7,6 +7,8 @@ class EnableEntry:
         self.var = tk.BooleanVar()
         self.var.set(enabled_by_default)
         self.locked = locked
+        if locked:
+            self.var.set(False)
 
         # grid the check button in the same row and column as the entry
         row = self.entry.grid_info()["row"]
@@ -22,7 +24,7 @@ class EnableEntry:
         return self.var.get()
 
     def toggle_entry(self):
-        if self.var.get():
+        if self.var.get() and not self.locked:
             self.enable_entry()
         else:
             self.disable_entry()

@@ -10,10 +10,10 @@ class Check:
     def set(self, entry, entry_name):
         self.entry      = entry
         self.entry_name = entry_name
+        return self
 
     def check(self):
         raise NotImplementedError("Abstract class")
-
 
 
 class IsFloat(Check):
@@ -31,16 +31,18 @@ class IsFloat(Check):
 
 
 class IsInTable(Check):
-    def __init__(self, table_name, field_name):
+    def __init__(self, conn, table_name, field_name):
         super().__init__()
         self.table_name  = table_name
         self.field_name  = field_name
+        self.conn        = conn
 
     def check(self):
         if self.entry.get():
             res = utils.query(
+                self.conn,
                 f"SELECT {self.field_name} FROM {self.table_name} \
-                WHERE {self.field_name} = {self.entry.get()};"
+                WHERE {self.field_name} = '{self.entry.get()}';"
             )
             if len(res) == 0:
                 messagebox.showerror("Error", f"{self.entry_name}: value '{self.entry.get()}' is not present in the field '{self.field_name}' of the table '{self.table_name}'.")
