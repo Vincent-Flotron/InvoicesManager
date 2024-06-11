@@ -66,14 +66,14 @@ def insert_invoice(conn, invoice):
     commit_if_connection(conn)
     return c.lastrowid
 
-def update_invoices(conn, invoices):
+def update_invoices(conn, invoices, invoice_ref):
     c = get_cursor(conn)
-    update_records_fields(c, 'invoices', invoices, invoices[0])
+    
+    ids               = [invoice.id for invoice in invoices]
+    recorded_invoices = fetch_invoices_by_ids(c, ids)
+    update_records_fields(c, 'invoices', invoices, invoice_ref)
     
     # Update related operations if exists
-    ids = [invoice.id for invoice in invoices]
-    recorded_invoices = fetch_invoices_by_ids(c, ids)
-
     for new_invoice, rec_invoice in zip(invoices, recorded_invoices):
         related_operation_was_updated = update_related_operation(c, rec_invoice, new_invoice)
 
@@ -89,11 +89,13 @@ def update_records_fields(conn, table, records_to_update, record_reference):
     c                = get_cursor(conn)
     fields_values    = get_not_none_and_not_id_properties(record_reference)
     placeholders     = ','.join(f"{field_name}=?" for field_name in fields_values.keys())
-    placeholders_ids = ','.join('?' for _ in fields_values.keys())
+    placeholders_ids = ','.join('?' for _ in records_to_update)
     query            = f"UPDATE {table} SET {placeholders} WHERE id IN ({placeholders_ids})"
     ids              = [rec.id for rec in records_to_update]
     values           = [val for val in fields_values.values()]
-    c.execute( query, values.append(ids) )
+    for id in ids:
+        values.append(id)
+    c.execute( query, values )
 
     commit_if_connection(conn)
 
@@ -106,7 +108,7 @@ def update_invoice(conn, invoice):
     related_operation_was_updated = update_related_operation(conn.cursor(), recorded_invoice, invoice)
 
     # Create a new operation
-    if not related_operation_was_updated \
+    if not related_operation_was_updated  \
        and invoice.has_paying_account()   \
        and invoice.is_paid():
         insert_operation_from_invoice(conn.cursor(), invoice)
@@ -114,9 +116,9 @@ def update_invoice(conn, invoice):
     commit_if_connection(conn)
 
 def update_related_operation(conn, recorded_invoice, invoice):
-    relative_operation = fetch_operation_by_invoice_id(conn, invoice.id)
+    relative_operation     = fetch_operation_by_invoice_id(conn, invoice.id)
     has_relative_operation = False
-    account_is_changing    = invoice.has_account()   and recorded_invoice.paying_account_id != invoice.paying_account_id
+    account_is_changing    = invoice.has_paying_account()   and recorded_invoice.paying_account_id != invoice.paying_account_id
     amount_is_changing     = invoice.has_amount()    and recorded_invoice.amount            != invoice.amount
     paid_date_is_changing  = invoice.has_paid_date() and recorded_invoice.paid_date         != invoice.paid_date
     if relative_operation:

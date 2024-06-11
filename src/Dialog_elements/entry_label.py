@@ -57,9 +57,12 @@ class EntryLabel:
                 check_object.set(self.entry, self.entry_name)
 
     def check(self):
-        if self.check_objects:
+        if self.get_state() and self.check_objects:
             for check_object in self.check_objects:
                 check_object.check()
+
+    def get_name(self):
+        return self.entry_name
 
     def get_value(self):
         if self.extract_object:
@@ -68,7 +71,7 @@ class EntryLabel:
             value_extracted = self.entry.get()
         return value_extracted
         
-    def get_enabled_value(self):
+    def get_value_if_enabled(self):
         if self.get_state():
             return self.get_value()
         else:
@@ -107,11 +110,13 @@ class EntryLabels:
     def get_next_row_nb(self):
         return self.row_nb
 
-    def get_enabled_values(self):
-        enabled_values = {}
-        for entry_name, entry_label in self.entry_labels.items():
-            enabled_values[entry_name] = entry_label.get_enabled_value() # edit to get enabled value and ame given by get_enabled_value. to avoid error with paying_account -> paying_account_id
-        return enabled_values
+    def get_enabled_entry_values(self):
+        enabled_entry_values = {}
+        for _, entry_label in self.entry_labels.items():
+            val = entry_label.get_value_if_enabled()
+            if val:
+                enabled_entry_values[entry_label.get_name()] = val # edit to get enabled value and name given by get_enabled_value. to avoid error with paying_account -> paying_account_id
+        return enabled_entry_values
 
     def __setitem__(self, key, value):
         self.entry_labels[key] = value

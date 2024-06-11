@@ -35,6 +35,8 @@ class InvoiceDialog(tk.Toplevel):
         label_frame.pack(pady=10, padx=10)
         self.entries_labels = EntryLabels(label_frame, self.many_items)
 
+        paying_account_id = 'paying_account_id'
+
         self.entries_labels.make_entry_label("Primary Receiver",   "primary_receiver",    Cust_Entry,     (check.IsRequired(),),                        None, False)
         self.entries_labels.make_entry_label("Receiver Name",      "receiver_name",       Cust_Entry,     (None),                                       None, False)
         self.entries_labels.make_entry_label("Receiver Address",   "receiver_address",    Cust_Entry,     (check.IsRequired(),),                        None, False)
@@ -45,7 +47,7 @@ class InvoiceDialog(tk.Toplevel):
         self.entries_labels.make_entry_label("Due Date",           "due_date",            Cust_Entry,     (check.IsRequired(),   check.IsValidDate()),  ExtractDate(),   False)
         self.entries_labels.make_entry_label("Paid Date",          "paid_date",           Cust_Entry,     (check.IsValidDate(),),                       ExtractDate(),   False)
         self.entries_labels.make_entry_label("Amount",             "amount",              Cust_Entry,     (check.IsFloat(),),                           ExtractAmount(), False)
-        self.entries_labels.make_entry_label("Paying Account",     "paying_account",      Cust_Combobox,  (check.IsInTable(self.conn, "accounts", "description"),),
+        self.entries_labels.make_entry_label("Paying Account",     paying_account_id,     Cust_Combobox,  (check.IsInTable(self.conn, "accounts", "description"),),
                                                                                                                                                         ExtractUsingQuery(self.conn, utils.get_paying_account_id_from_descr),
                                                                                                                                                               False)
         self.entries_labels.make_entry_label("Remark",             "remark",              Cust_Entry,     (None),                                       None, False)
@@ -56,7 +58,7 @@ class InvoiceDialog(tk.Toplevel):
         self.entries_labels.make_entry_label("File Path",          "file_path",           Cust_file_path, (None),                                       None, True if self.many_items else False)
         # Populate the paying account combo box
         accounts = utils.fetch_accounts(self.conn)
-        self.entries_labels["paying_account"].set_values([account.description for account in accounts])
+        self.entries_labels[paying_account_id].set_values( [account.description for account in accounts] )
 
         # Add buttons to save or cancel
         save_button = tk.Button(self, text="Save", command=self.save)
@@ -73,7 +75,7 @@ class InvoiceDialog(tk.Toplevel):
         if not self.validate_fields():
             return
 
-        enabled_values = self.entries_labels.get_enabled_values()
+        enabled_values = self.entries_labels.get_enabled_entry_values()
 
         # id                  = self.id
         # primary_receiver    = self.entries_labels['primary_receiver'].get_value()
@@ -120,7 +122,8 @@ class InvoiceDialog(tk.Toplevel):
 
         # self.result = invoice
 
-        self.result = self.generate_invoices(self.items, enabled_values)
+        self.result = self.update_invoices(self.items, enabled_values)
+        invoice_ref = self.generate_invoices(self.items, enabled_values)[0]
     
         # Add invoice
         if self.result and self.title_str == "Add_Item":
@@ -128,24 +131,34 @@ class InvoiceDialog(tk.Toplevel):
             self.parent.populate_treeview()
         # Update invoice
         elif self.result and self.title_str == "Edit_Item":
-            utils.update_invoices(self.conn, self.result)
+            utils.update_invoices(self.conn, self.result, invoice_ref)
             self.parent.populate_treeview()
 
         # Update operations view
         self.notebook.children["!operationsview"].populate_treeview()
         self.destroy()
 
+    def update_invoices(self, items, entry_values):
+        invoices = []
+        for item in items:
+            invoices_updated = utils.fetch_invoice_by_id(self.conn, item.id)
+            # Assuming enabled_values is a dictionary with attribute names and functions or keys to get the values
+            for name, value in entry_values.items():
+                setattr(invoices_updated, name, value)
+            
+            invoices.append(invoices_updated)
+        
+        return invoices
+    
     def generate_invoices(self, items, entry_values):
         invoices = []
         for item in items:
-            new_invoice = Invoice()
-            
+            invoice = Invoice()
             # Assuming enabled_values is a dictionary with attribute names and functions or keys to get the values
             for name, value in entry_values.items():
-                setattr(new_invoice, name, value)
-            
-            new_invoice.id = item.id
-            invoices.append(new_invoice)
+                setattr(invoice, name, value)
+            invoice.id = item.id
+            invoices.append(invoice)
         
         return invoices
 
@@ -166,7 +179,7 @@ class InvoiceDialog(tk.Toplevel):
         self.entries_labels['due_date'].insert(0, invoice.due_date)
         self.entries_labels['paid_date'].insert(0, invoice.paid_date)
         self.entries_labels['amount'].insert(0, str(invoice.amount))
-        self.entries_labels['paying_account'].set(utils.get_account_description(self.conn, invoice.paying_account_id))
+        self.entries_labels['paying_account_id'].set(utils.get_account_description(self.conn, invoice.paying_account_id))
         self.entries_labels['file_path'].insert(0, invoice.file_path)
         self.entries_labels['remark'].insert(0, invoice.remark)
         self.entries_labels['description'].insert(0, invoice.description)
