@@ -1,8 +1,9 @@
 import tkinter as tk
 from Dialog_elements.enable_entry import EnableEntry
 
+
 class EntryLabel:
-    def __init__(self, label_frame, row_nb, label_text, entry_name, entry_type=tk.Entry, check_objects=None, locked=False, many_items=False):
+    def __init__(self, label_frame, row_nb, label_text, entry_name, entry_type=tk.Entry, check_objects=None, extract_object=None, locked=False, many_items=False):
         self.label = tk.Label(label_frame, text=f"{label_text}:")
         self.entry = entry_type(label_frame)
         self.label.grid(row=row_nb, column=0, sticky="w")
@@ -17,6 +18,7 @@ class EntryLabel:
         self.default_state = self.ee.get_state()
         self.check_objects = check_objects
         self.init_check_objects()
+        self.extract_object = extract_object
 
     def insert(self, *args, **kwargs):
         self.enable_entry()
@@ -60,7 +62,18 @@ class EntryLabel:
                 check_object.check()
 
     def get_value(self):
-        return self.entry.get()
+        if self.extract_object:
+            value_extracted = self.extract_object.extract(self.entry.get())
+        else:
+            value_extracted = self.entry.get()
+        return value_extracted
+        
+    def get_enabled_value(self):
+        if self.get_state():
+            return self.get_value()
+        else:
+            return None
+        
 
 
 class EntryLabels:
@@ -71,8 +84,8 @@ class EntryLabels:
         self.states = []
         self.many_items = many_items
 
-    def make_entry_label(self, label_text, entry_name, entry_type=tk.Entry, check_objects=None, locked=False):
-        entry_label = EntryLabel(self.label_frame, self.row_nb, label_text, entry_name, entry_type, check_objects, locked, self.many_items)
+    def make_entry_label(self, label_text, entry_name, entry_type=tk.Entry, check_objects=None, extract_object=None, locked=False):
+        entry_label = EntryLabel(self.label_frame, self.row_nb, label_text, entry_name, entry_type, check_objects, extract_object, locked, self.many_items)
         self.entry_labels[entry_name] = entry_label
         self.row_nb += 1
 
@@ -94,6 +107,11 @@ class EntryLabels:
     def get_next_row_nb(self):
         return self.row_nb
 
+    def get_enabled_values(self):
+        enabled_values = {}
+        for entry_name, entry_label in self.entry_labels.items():
+            enabled_values[entry_name] = entry_label.get_enabled_value() # edit to get enabled value and ame given by get_enabled_value. to avoid error with paying_account -> paying_account_id
+        return enabled_values
 
     def __setitem__(self, key, value):
         self.entry_labels[key] = value

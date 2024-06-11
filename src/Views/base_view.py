@@ -159,23 +159,27 @@ class BaseView(tk.Frame):
     def edit_item(self):
         # Retrieve the selected item from the treeview
         selected = self.tree.focus()
-        if selected:
-            item_id = self.tree.item(selected)["values"][0]
+        selected_items = self.tree.selection()
+        if selected_items:
+            item_ids = []
+            for item in selected_items:
+                item_id = self.tree.item(item)["values"][0]
+                item_ids.append(item_id)
             if self.view_name == "invoices_to_pay":
-                item = utils.fetch_invoice_by_id(self.conn, item_id)
+                items = utils.fetch_invoices_by_ids(self.conn, item_ids)
             elif self.view_name == "operations":
-                item = utils.fetch_operation_by_id(self.conn, item_id)
+                items = utils.fetch_operations_by_ids(self.conn, item_ids)
             elif self.view_name == "accounts":
-                item = utils.fetch_account_by_id(self.conn, item_id)
-            dialog = self.dialog_class(self, self.parent, title="Edit_Item", item=item)
+                items = utils.fetch_accounts_by_ids(self.conn, item_ids)
+            dialog = self.dialog_class(self, self.parent, title="Edit_Item", item=items)
             if dialog.result:
-                # Update the item in the database
-                if self.view_name == "invoices_to_pay":
-                    utils.update_invoice(self.conn, dialog.result)
-                elif self.view_name == "operations":
-                    utils.update_operation(self.conn, dialog.result)
-                elif self.view_name == "accounts":
-                    utils.update_account(self.conn, dialog.result)
+                # # Update the item in the database
+                # if self.view_name == "invoices_to_pay":
+                #     utils.update_invoice(self.conn, dialog.result)
+                # elif self.view_name == "operations":
+                #     utils.update_operation(self.conn, dialog.result)
+                # elif self.view_name == "accounts":
+                #     utils.update_account(self.conn, dialog.result)
                 # Re-populate the treeview
                 self.populate_treeview()
 

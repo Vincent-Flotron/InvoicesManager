@@ -1,3 +1,4 @@
+import inspect
 import sqlite3
 from models import Account, Invoice, Operation
 from tkinter import messagebox
@@ -38,19 +39,66 @@ def fetch_invoice_by_id(conn, invoice_id):
         return Invoice(*row)
     return None
 
+def fetch_invoices_by_ids(conn, invoice_ids):
+    c = get_cursor(conn)
+    
+    # Constructing the SQL query with the appropriate number of placeholders
+    placeholders = ','.join('?' for _ in invoice_ids)
+    query = f"SELECT * FROM invoices WHERE id IN ({placeholders})"
+    
+    # Executing the query with the invoice_ids
+    c.execute(query, invoice_ids)
+    rows = c.fetchall()
+    
+    # Returning a list of Invoice objects
+    if rows:
+        return [Invoice(*row) for row in rows]
+    return []
+
 def insert_invoice(conn, invoice):
     c = get_cursor(conn)
     c.execute("INSERT INTO invoices (primary_receiver, receiver_name, receiver_address, receiver_account, primary_reference, secondary_reference, invoice_date, due_date, paid_date, amount, paying_account_id, file_path, remark, description, note, tag, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (invoice.primary_receiver, invoice.receiver_name, invoice.receiver_address, invoice.receiver_account, invoice.primary_reference, invoice.secondary_reference, invoice.invoice_date, invoice.due_date, invoice.paid_date, invoice.amount, invoice.paying_account_id, invoice.file_path, invoice.remark, invoice.description, invoice.note, invoice.tag, invoice.category))
     invoice.id = c.lastrowid
     # Create a new operation
-    if invoice.as_paying_account()   \
+    if invoice.has_paying_account()   \
         and invoice.is_paid():
         insert_operation_from_invoice(conn.cursor(), invoice)
     commit_if_connection(conn)
     return c.lastrowid
 
+def update_invoices(conn, invoices):
+    c = get_cursor(conn)
+    update_records_fields(c, 'invoices', invoices, invoices[0])
+    
+    # Update related operations if exists
+    ids = [invoice.id for invoice in invoices]
+    recorded_invoices = fetch_invoices_by_ids(c, ids)
+
+    for new_invoice, rec_invoice in zip(invoices, recorded_invoices):
+        related_operation_was_updated = update_related_operation(c, rec_invoice, new_invoice)
+
+        # Create a new operation
+        if not related_operation_was_updated \
+        and new_invoice.has_paying_account() \
+        and new_invoice.is_paid():
+            invoice_updated = fetch_invoice_by_id(new_invoice.id)
+            insert_operation_from_invoice(c, invoice_updated)
+    commit_if_connection(conn)
+
+def update_records_fields(conn, table, records_to_update, record_reference):
+    c                = get_cursor(conn)
+    fields_values    = get_not_none_and_not_id_properties(record_reference)
+    placeholders     = ','.join(f"{field_name}=?" for field_name in fields_values.keys())
+    placeholders_ids = ','.join('?' for _ in fields_values.keys())
+    query            = f"UPDATE {table} SET {placeholders} WHERE id IN ({placeholders_ids})"
+    ids              = [rec.id for rec in records_to_update]
+    values           = [val for val in fields_values.values()]
+    c.execute( query, values.append(ids) )
+
+    commit_if_connection(conn)
+
+
 def update_invoice(conn, invoice):
-    # c = conn.cursor()
     c = get_cursor(conn)
     c.execute("UPDATE invoices SET primary_receiver=?, receiver_name=?, receiver_address=?, receiver_account=?, primary_reference=?, secondary_reference=?, invoice_date=?, due_date=?, paid_date=?, amount=?, paying_account_id=?, file_path=?, remark=?, description=?, note=?, tag=?, category=? WHERE id=?", (invoice.primary_receiver, invoice.receiver_name, invoice.receiver_address, invoice.receiver_account, invoice.primary_reference, invoice.secondary_reference, invoice.invoice_date, invoice.due_date, invoice.paid_date, invoice.amount, invoice.paying_account_id, invoice.file_path, invoice.remark, invoice.description, invoice.note, invoice.tag, invoice.category, invoice.id))
     # Update related operation if exists
@@ -59,7 +107,7 @@ def update_invoice(conn, invoice):
 
     # Create a new operation
     if not related_operation_was_updated \
-       and invoice.as_paying_account()   \
+       and invoice.has_paying_account()   \
        and invoice.is_paid():
         insert_operation_from_invoice(conn.cursor(), invoice)
 
@@ -68,9 +116,9 @@ def update_invoice(conn, invoice):
 def update_related_operation(conn, recorded_invoice, invoice):
     relative_operation = fetch_operation_by_invoice_id(conn, invoice.id)
     has_relative_operation = False
-    account_is_changing = recorded_invoice.paying_account_id != invoice.paying_account_id
-    amount_is_changing = recorded_invoice.amount != invoice.amount
-    paid_date_is_changing = recorded_invoice.paid_date != invoice.paid_date
+    account_is_changing    = invoice.has_account()   and recorded_invoice.paying_account_id != invoice.paying_account_id
+    amount_is_changing     = invoice.has_amount()    and recorded_invoice.amount            != invoice.amount
+    paid_date_is_changing  = invoice.has_paid_date() and recorded_invoice.paid_date         != invoice.paid_date
     if relative_operation:
         if account_is_changing:
             update_operation_account_from_invoice(conn, invoice)
@@ -80,9 +128,14 @@ def update_related_operation(conn, recorded_invoice, invoice):
             update_operation_paid_date_from_invoice(conn, invoice)
         has_relative_operation = True
 
-        if not invoice.paying_account_id \
-            or not invoice.amount        \
-            or not invoice.paid_date:
+        must_update_operation = account_is_changing   \
+                                or amount_is_changing \
+                                or paid_date_is_changing
+        must_delete_operation = not invoice.paying_account_id \
+                                or not invoice.amount         \
+                                or not invoice.paid_date
+        
+        if must_update_operation and must_delete_operation:
             delete_operation(conn, relative_operation.id)
             has_relative_operation = False
 
@@ -128,6 +181,22 @@ def fetch_account_by_id(conn, account_id):
     row = c.fetchone()
     if row:
         return Account(*row)
+    
+def fetch_accounts_by_ids(conn, account_ids):
+    c = get_cursor(conn)
+    
+    # Constructing the SQL query with the appropriate number of placeholders
+    placeholders = ','.join('?' for _ in account_ids)
+    query = f"SELECT * FROM accounts WHERE id IN ({placeholders})"
+    
+    # Executing the query with the account_ids
+    c.execute(query, account_ids)
+    rows = c.fetchall()
+    
+    # Returning a list of Account objects
+    if rows:
+        return [Account(*row) for row in rows]
+    return []
     
 def fetch_account_by_description(conn, description):
     c = get_cursor(conn)
@@ -257,6 +326,22 @@ def fetch_operation_by_id(conn, operations_id):
         return Operation(*row)
     return None
 
+def fetch_operations_by_ids(conn, operation_ids):
+    c = get_cursor(conn)
+    
+    # Constructing the SQL query with the appropriate number of placeholders
+    placeholders = ','.join('?' for _ in operation_ids)
+    query = f"SELECT * FROM accounts WHERE id IN ({placeholders})"
+    
+    # Executing the query with the operations_ids
+    c.execute(query, operation_ids)
+    rows = c.fetchall()
+    
+    # Returning a list of Operations objects
+    if rows:
+        return [Operation(*row) for row in rows]
+    return []
+
 def fetch_operation_by_invoice_id(conn, invoice_id):
     c = get_cursor(conn)
     c.execute("SELECT * FROM operations WHERE invoice_id=?", (invoice_id,))
@@ -371,3 +456,25 @@ def restore_database(conn, backup_file, absolute_db_path):
 
 
 # Add other CRUD operations for accounts, invoices, and operations
+
+
+# Reflection
+def get_properties(obj):
+    # Assuming 'obj' is your object
+    all_attributes = vars(obj)
+
+    # Filter out the functions
+    properties = {key: value for key, value in all_attributes.items()
+                if not inspect.isfunction(value)}
+    
+    return properties
+
+def get_not_none_properties(obj):
+    properties     = get_properties(obj)
+    not_none_props = {key: value for key, value in properties.items() if value != None}
+    return not_none_props
+
+def get_not_none_and_not_id_properties(obj):
+    not_none_props            = get_not_none_properties(obj)
+    not_none_and_not_id_props = {key: value for key, value in not_none_props.items() if key != 'id'}
+    return not_none_and_not_id_props
