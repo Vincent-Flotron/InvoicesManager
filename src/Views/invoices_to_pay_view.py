@@ -1,12 +1,11 @@
-import tkinter as tk
-from models import Invoice
-import utils
-import format
-from Views.base_view import BaseView
-from Dialog_elements.entry_label import EntryLabels
+import tkinter      as tk
 import Checks.check as check
-from custom_entries import *
-from extract import *
+import utils
+from   models                      import Invoice
+from   Views.base_view             import BaseView
+from   Dialog_elements.entry_label import EntryLabels
+from   custom_entries              import *
+from   extract                     import *
 
 class InvoicesToPayView(BaseView):
     def __init__(self, parent, conn, *args, **kwargs):
@@ -76,59 +75,14 @@ class InvoiceDialog(tk.Toplevel):
             return
 
         enabled_values = self.entries_labels.get_enabled_entry_values()
-
-        # id                  = self.id
-        # primary_receiver    = self.entries_labels['primary_receiver'].get_value()
-        # receiver_name       = self.entries_labels['receiver_name'].get_value()
-        # receiver_address    = self.entries_labels['receiver_address'].get_value()
-        # receiver_account    = self.entries_labels['receiver_account'].get_value()
-        # primary_reference   = self.entries_labels['primary_reference'].get_value()
-        # secondary_reference = self.entries_labels['secondary_reference'].get_value()
-        # invoice_date        = self.entries_labels['invoice_date'].get_value()
-        # invoice_date        =  format.format_date(self.entries_labels['invoice_date'].get_value())
-        # due_date            = self.entries_labels['due_date'].get_value()
-        # due_date            =  format.format_date(self.entries_labels['due_date'].get_value())
-        # paid_date           = self.entries_labels['paid_date'].get_value()
-        # paid_date           =  format.format_date(self.entries_labels['paid_date'].get_value())
-        # amount              = round(float(self.entries_labels['amount'].get_value()), 2)
-        # paying_account_id   = utils.get_paying_account_id_from_descr(self.conn, self.entries_labels['paying_account'].get_value())
-        # file_path           = self.entries_labels['file_path'].get_value()
-        # remark              = self.entries_labels['remark'].get_value()
-        # description         = self.entries_labels['description'].get_value()
-        # note                = self.entries_labels['note'].get_value()
-        # tag                 = self.entries_labels['tag'].get_value()
-        # category            = self.entries_labels['category'].get_value()
-
-        # invoice = Invoice(
-        #     id                  = id,
-        #     primary_receiver    = primary_receiver,
-        #     receiver_name       = receiver_name,
-        #     receiver_address    = receiver_address,
-        #     receiver_account    = receiver_account,
-        #     primary_reference   = primary_reference,
-        #     secondary_reference = secondary_reference,
-        #     invoice_date        = invoice_date,
-        #     due_date            = due_date,
-        #     paid_date           = paid_date,
-        #     amount              = amount,
-        #     paying_account_id   = paying_account_id,
-        #     file_path           = file_path,
-        #     remark              = remark,
-        #     description         = description,
-        #     note                = note,
-        #     tag                 = tag,
-        #     category            = category
-        # )
-
-        # self.result = invoice
-
-        self.result = self.update_invoices(self.items, enabled_values)
-        invoice_ref = self.generate_invoices(self.items, enabled_values)[0]
+        self.result    = self.merge_invoices(self.items, enabled_values)
+        invoice_ref    = self.generate_invoices(self.items, enabled_values)[0]
     
         # Add invoice
         if self.result and self.title_str == "Add_Item":
             utils.insert_invoice(self.conn, self.result[0])
             self.parent.populate_treeview()
+
         # Update invoice
         elif self.result and self.title_str == "Edit_Item":
             utils.update_invoices(self.conn, self.result, invoice_ref)
@@ -138,7 +92,7 @@ class InvoiceDialog(tk.Toplevel):
         self.notebook.children["!operationsview"].populate_treeview()
         self.destroy()
 
-    def update_invoices(self, items, entry_values):
+    def merge_invoices(self, items, entry_values):
         invoices = []
         for item in items:
             invoices_updated = utils.fetch_invoice_by_id(self.conn, item.id)
@@ -169,22 +123,22 @@ class InvoiceDialog(tk.Toplevel):
 
     def populate_fields(self, invoice):
         self.entries_labels.enable_all()
-        self.entries_labels['primary_receiver'].insert(0, invoice.primary_receiver)
-        self.entries_labels['receiver_name'].insert(0, invoice.receiver_name)
-        self.entries_labels['receiver_address'].insert(0, invoice.receiver_address)
-        self.entries_labels['receiver_account'].insert(0, invoice.receiver_account)
-        self.entries_labels['primary_reference'].insert(0, invoice.primary_reference)
+        self.entries_labels['primary_receiver'].   insert(0, invoice.primary_receiver)
+        self.entries_labels['receiver_name'].      insert(0, invoice.receiver_name)
+        self.entries_labels['receiver_address'].   insert(0, invoice.receiver_address)
+        self.entries_labels['receiver_account'].   insert(0, invoice.receiver_account)
+        self.entries_labels['primary_reference'].  insert(0, invoice.primary_reference)
         self.entries_labels['secondary_reference'].insert(0, invoice.secondary_reference)
-        self.entries_labels['invoice_date'].insert(0, invoice.invoice_date)
-        self.entries_labels['due_date'].insert(0, invoice.due_date)
-        self.entries_labels['paid_date'].insert(0, invoice.paid_date)
-        self.entries_labels['amount'].insert(0, str(invoice.amount))
-        self.entries_labels['paying_account_id'].set(utils.get_account_description(self.conn, invoice.paying_account_id))
-        self.entries_labels['file_path'].insert(0, invoice.file_path)
-        self.entries_labels['remark'].insert(0, invoice.remark)
-        self.entries_labels['description'].insert(0, invoice.description)
-        self.entries_labels['note'].insert(0, invoice.note)
-        self.entries_labels['tag'].insert(0, invoice.tag)
-        self.entries_labels['category'].insert(0, invoice.category)
+        self.entries_labels['invoice_date'].       insert(0, invoice.invoice_date)
+        self.entries_labels['due_date'].           insert(0, invoice.due_date)
+        self.entries_labels['paid_date'].          insert(0, invoice.paid_date)
+        self.entries_labels['amount'].             insert(0, str(invoice.amount))
+        self.entries_labels['paying_account_id'].  set(utils.get_account_description(self.conn, invoice.paying_account_id))
+        self.entries_labels['file_path'].          insert(0, invoice.file_path)
+        self.entries_labels['remark'].             insert(0, invoice.remark)
+        self.entries_labels['description'].        insert(0, invoice.description)
+        self.entries_labels['note'].               insert(0, invoice.note)
+        self.entries_labels['tag'].                insert(0, invoice.tag)
+        self.entries_labels['category'].           insert(0, invoice.category)
         self.entries_labels.reset_all_states()
 

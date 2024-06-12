@@ -1,4 +1,5 @@
 import format
+from utils import ExecuteQuery
 
 
 class Extract:
@@ -27,12 +28,10 @@ class ExtractAmount(Extract):
         return output
 
 
-class ExtractUsingQuery(Extract):
+class ExtractUsingQuery(Extract, ExecuteQuery):
     def __init__(self, conn, function_query):
-        super().__init__()
-        self.conn = conn
-        self.function_query = function_query
+        Extract.__init__(self)
+        ExecuteQuery.__init__(self, conn, function_query)
 
     def extract(self, input):
-        output = self.function_query(self.conn, input)
-        return output
+        return ExecuteQuery.execute(self, input)

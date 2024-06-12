@@ -459,6 +459,15 @@ def restore_database(conn, backup_file, absolute_db_path):
 
 # Add other CRUD operations for accounts, invoices, and operations
 
+# General
+class ExecuteQuery:
+    def __init__(self, conn, function_query):
+        self.conn           = conn
+        self.function_query = function_query
+
+    def execute(self, input):
+        output = self.function_query(self.conn, input)
+        return output
 
 # Reflection
 def get_properties(obj):
