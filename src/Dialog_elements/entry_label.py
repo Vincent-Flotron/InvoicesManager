@@ -3,20 +3,21 @@ from Dialog_elements.enable_entry import EnableEntry
 
 
 class EntryLabel:
-    def __init__(self, label_frame, row_nb, label_text, entry_name, entry_type=tk.Entry, check_objects=None, extract_object=None, locked=False, many_items=False):
+    def __init__(self, label_frame, row_nb, label_text, entry_name, entry_object=tk.Entry, check_objects=None, extract_object=None, locked=False, many_items=False):
         self.label = tk.Label(label_frame, text=f"{label_text}:")
-        self.entry = entry_type(label_frame)
+        self.entry = entry_object.make(label_frame)
         self.label.grid(row=row_nb, column=0, sticky="w")
         self.entry.grid(row=row_nb, column=1)
-        self.ee = EnableEntry(
+        
+        self.ee    = EnableEntry(
             entry              = self.entry,
             label_frame        = label_frame,
             enabled_by_default = not many_items,
             locked             = locked
         )
-        self.entry_name = entry_name
-        self.default_state = self.ee.get_state()
-        self.check_objects = check_objects
+        self.entry_name     = entry_name
+        self.default_state  = self.ee.get_state()
+        self.check_objects  = check_objects
         self.init_check_objects()
         self.extract_object = extract_object
 
@@ -36,7 +37,7 @@ class EntryLabel:
     def get_default_state(self):
         return self.default_state
     
-    def set_values(self, values):
+    def set_choices(self, values):
         self.entry["values"] = values
 
     def reset_entry(self):
@@ -57,9 +58,11 @@ class EntryLabel:
                 check_object.set(self.entry, self.entry_name)
 
     def check(self):
+        is_valid = True
         if self.get_state() and self.check_objects:
             for check_object in self.check_objects:
-                check_object.check()
+                is_valid = is_valid and check_object.check()
+        return is_valid
 
     def get_name(self):
         return self.entry_name
@@ -87,8 +90,8 @@ class EntryLabels:
         self.states = []
         self.many_items = many_items
 
-    def make_entry_label(self, label_text, entry_name, entry_type=tk.Entry, check_objects=None, extract_object=None, locked=False):
-        entry_label = EntryLabel(self.label_frame, self.row_nb, label_text, entry_name, entry_type, check_objects, extract_object, locked, self.many_items)
+    def make_entry_label(self, label_text, entry_name, entry_type_object=tk.Entry, check_objects=None, extract_object=None, locked=False):
+        entry_label = EntryLabel(self.label_frame, self.row_nb, label_text, entry_name, entry_type_object, check_objects, extract_object, locked, self.many_items)
         self.entry_labels[entry_name] = entry_label
         self.row_nb += 1
 
@@ -150,3 +153,7 @@ class EntryLabels:
 
     def items(self):
         return self.entry_labels.items()
+    
+    def populate(self):
+        for _, entry_label in self.entry_labels.items():
+            entry_label.entry.populate()

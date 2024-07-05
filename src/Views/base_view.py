@@ -60,45 +60,65 @@ class BaseView(tk.Frame):
             self.total_balance_label.pack(side="top", fill="x")
 
         # Populate the treeview
-        self.populate_treeview()
+        self.update_view()
 
         # Bind events
         self.tree.bind("<Double-1>", self.open_file)
         self.tree.bind("<<TreeviewSelect>>", self.update_sum_or_total_balance)
 
-    def populate_treeview(self):
+    def populate_treeview(self, view_name):
         # Clear the treeview
         self.tree.delete(*self.tree.get_children())
 
         # Fetch items from the database
-        if self.view_name == "invoices_to_pay":
-            items = utils.fetch_invoices(self.conn)
-        elif self.view_name == "operations":
-            items = utils.fetch_operations(self.conn)
-        elif self.view_name == "accounts":
-            items = utils.fetch_accounts(self.conn)
+        if   view_name == "invoices_to_pay":
+            selected_items = utils.fetch_invoices(self.conn)
+        elif view_name == "operations":
+            selected_items = utils.fetch_operations(self.conn)
+        elif view_name == "accounts":
+            selected_items = utils.fetch_accounts(self.conn)
 
-        self.insert_rows(items)
+        self.insert_rows(selected_items)
 
-    def insert_rows(self, items):
+    def update_view(self):
+        self.populate_treeview(self.view_name)
+
+    def update_operations(self):
+        self.populate_treeview("operations")
+
+    def update_accounts(self):
+        self.populate_treeview("accounts")
+
+    def insert_rows(self, selected_items):
         # Insert items into the treeview
         remain = 0
-        for item in items:
-            values = [getattr(item, col) if hasattr(item, col) else '' for col in self.columns]
-            if self.view_name == "operations" and item.invoice_id:
-                invoice = utils.fetch_invoice_by_id(self.conn, item.invoice_id)
-                account = utils.fetch_account_by_id(self.conn, item.account_id)
-                values[5] = remain = remain + values[3] - values[4]
-                values[6] = account.description
-                values[7] = invoice.primary_receiver
-                values[8] = invoice.primary_reference
-                values[9] = invoice.file_path
+        for sel_item in selected_items:
+            values = [getattr(sel_item, col) if hasattr(sel_item, col) else '' for col in self.columns]
+            if self.view_name == "operations" and sel_item.invoice_id:
+                invoice = utils.fetch_invoice_by_id(self.conn, sel_item.invoice_id)
+                missing_invoices_mess = None
+                missing_account_mess  = None
+                if not invoice:
+                    missing_invoices_mess = f"The operation with id '{sel_item.id}' has as a deleted invoice reference. invoice ref id: '{sel_item.invoice_id}'"
+                account = utils.fetch_account_by_id(self.conn, sel_item.account_id)
+                if not account:
+                    missing_account_mess = f"The operation with id '{sel_item.id}' has as a deleted account reference. account ref id: '{sel_item.account_id}'"
+                values[5]     = remain = remain + values[3] - values[4]
+                values[6]     = account.description if not missing_account_mess else missing_account_mess
+                if not missing_invoices_mess:
+                    values[7] = invoice.primary_receiver
+                    values[8] = invoice.primary_reference
+                    values[9] = invoice.file_path
+                else:
+                    values[7] = missing_invoices_mess
+                    values[8] = missing_invoices_mess
+                    values[9] = missing_invoices_mess
             self.tree.insert("", "end", values=values)
 
         # Add a row to display the total balance for the operations view
         if self.view_name == "operations":
-            total_income = sum(item.income for item in items if item.income is not None)
-            total_outcome = sum(item.outcome for item in items if item.outcome is not None)
+            total_income  = sum(item.income  for item in selected_items if item.income  is not None)
+            total_outcome = sum(item.outcome for item in selected_items if item.outcome is not None)
             total_balance = total_income - total_outcome
             self.tree.insert("", "end", values=("Total", "", "", f"{total_income:.2f}", f"{total_outcome:.2f}", "", "", f"{total_balance:.2f}"))
 
@@ -135,16 +155,16 @@ class BaseView(tk.Frame):
         self.tree.delete(*self.tree.get_children())
 
         # Fetch items from the database
-        if self.view_name == "invoices_to_pay":
-            items = utils.fetch_invoices(self.conn)
+        if self.view_name   == "invoices_to_pay":
+            selected_items   = utils.fetch_invoices(self.conn)
         elif self.view_name == "operations":
-            items = utils.fetch_operations(self.conn)
+            selected_items   = utils.fetch_operations(self.conn)
         elif self.view_name == "accounts":
-            items = utils.fetch_accounts(self.conn)
+            selected_items   = utils.fetch_accounts(self.conn)
 
         # Filter operations based on selected accounts
         selected_items_on_filter = [text for text, var in self.checkbox_vars.items() if var.get()]
-        filtered_items = [item for item in items if getattr(item, self.item_linked_attribute) in selected_items_on_filter]
+        filtered_items = [item for item in selected_items if getattr(item, self.item_linked_attribute) in selected_items_on_filter]
 
         # Insert the filtered operations into the treeview
         self.insert_rows(filtered_items)
@@ -171,17 +191,19 @@ class BaseView(tk.Frame):
                 items = utils.fetch_operations_by_ids(self.conn, item_ids)
             elif self.view_name == "accounts":
                 items = utils.fetch_accounts_by_ids(self.conn, item_ids)
-            dialog = self.dialog_class(self, self.parent, title="Edit_Item", item=items)
-            if dialog.result:
-                # # Update the item in the database
-                # if self.view_name == "invoices_to_pay":
-                #     utils.update_invoice(self.conn, dialog.result)
-                # elif self.view_name == "operations":
-                #     utils.update_operation(self.conn, dialog.result)
-                # elif self.view_name == "accounts":
-                #     utils.update_account(self.conn, dialog.result)
+            dialog = self.dialog_class(self, self.parent, title="Edit_Item", selected_items=items)
+            if dialog.need_update_view and self.view_name   == "invoices_to_pay":
+                # Re-populate the treeviews
+                self.update_operations()
+                self.update_view()
+            elif dialog.need_update_view and self.view_name == "accounts":
+                # Re-populate the treeviews
+                self.update_accounts()
+                self.update_view()
+            elif dialog.need_update_view:
                 # Re-populate the treeview
-                self.populate_treeview()
+                self.update_view()
+
 
     def delete_items(self):
         # Retrieve the selected items from the treeview
@@ -192,7 +214,7 @@ class BaseView(tk.Frame):
                 item_id = self.tree.item(item)["values"][0]
                 self.delete_func(self.conn, item_id)
             # Re-populate the treeview
-            self.populate_treeview()
+            self.update_view()
 
     def filter_items(self):
         # Get the search term from the entry widget

@@ -21,13 +21,14 @@ class IsFloat(Check):
         super().__init__()
 
     def check(self):
+        return_value = True
         if self.entry.get():
             try:
                 number = float(self.entry.get())
             except ValueError:
                 messagebox.showerror("Error", f"{self.entry_name}: value '{str(self.entry.get())}' is not a float")
-                return False
-
+                return_value = False
+        return return_value
 
 
 class IsInTable(Check):
@@ -38,6 +39,7 @@ class IsInTable(Check):
         self.conn        = conn
 
     def check(self):
+        return_value = True
         if self.entry.get():
             res = utils.query(
                 self.conn,
@@ -46,7 +48,8 @@ class IsInTable(Check):
             )
             if len(res) == 0:
                 messagebox.showerror("Error", f"{self.entry_name}: value '{self.entry.get()}' is not present in the field '{self.field_name}' of the table '{self.table_name}'.")
-                return False
+                return_value = False
+        return return_value
     
 
 
@@ -55,9 +58,11 @@ class IsRequired(Check):
         super().__init__()
 
     def check(self):
+        return_value = True
         if not self.entry.get():
             messagebox.showerror("Error", f"{self.entry_name}: a value is required.")
-            return False
+            return_value = False
+        return return_value
 
 
 
@@ -66,7 +71,9 @@ class IsValidDate(Check):
         super().__init__()
 
     def check(self):
+        return_value = True
         if self.entry.get():
             if not validation.date_is_valid(self.entry.get()):
                 messagebox.showerror("Error", f"{self.entry_name}: '{self.entry.get()}' is not on format YYYY.MM.DD or YY.M.D or YYYY-MM-DD or YY-M-D.")
-                return False
+                return_value = False
+        return return_value

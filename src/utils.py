@@ -81,7 +81,7 @@ def update_invoices(conn, invoices, invoice_ref):
         if not related_operation_was_updated \
         and new_invoice.has_paying_account() \
         and new_invoice.is_paid():
-            invoice_updated = fetch_invoice_by_id(new_invoice.id)
+            invoice_updated = fetch_invoice_by_id(c, new_invoice.id)
             insert_operation_from_invoice(c, invoice_updated)
     commit_if_connection(conn)
 
@@ -147,6 +147,11 @@ def update_related_operation(conn, recorded_invoice, invoice):
 def delete_invoice(conn, invoice_id):
     c = get_cursor(conn)
     c.execute("DELETE FROM invoices WHERE id=?", (invoice_id,))
+    
+    relative_operation     = fetch_operation_by_invoice_id(conn, invoice_id)
+    if relative_operation:
+        delete_operation(conn, relative_operation.id)
+
     commit_if_connection(conn)
 
 def filter_invoices(conn, search_term):
