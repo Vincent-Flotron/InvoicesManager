@@ -12,16 +12,16 @@ class AccountsView(BaseView):
         columns_names = fields_for_columns
         super().__init__(parent, conn, "accounts", fields_for_columns, columns_names, dialog_class, delete_func, *args, **kwargs)
 
-    def populate_treeview(self):
-        # Clear the treeview
-        self.tree.delete(*self.tree.get_children())
+    # def populate_treeview(self):
+    #     # Clear the treeview
+    #     self.tree.delete(*self.tree.get_children())
 
-        # Fetch accounts from the database
-        accounts = utils.fetch_accounts(self.conn)
+    #     # Fetch accounts from the database
+    #     accounts = utils.fetch_accounts(self.conn)
 
-        # Insert accounts into the treeview
-        for account in accounts:
-            self.tree.insert("", "end", values=(account.id, account.description, account.bank_name, account.iban))
+    #     # Insert accounts into the treeview
+    #     for account in accounts:
+    #         self.tree.insert("", "end", values=(account.id, account.description, account.bank_name, account.iban))
 
 class AccountDialog(tk.Toplevel):
     def __init__(self, parent, notebook, title, item=None):

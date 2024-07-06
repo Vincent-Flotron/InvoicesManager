@@ -106,15 +106,15 @@ class InvoiceDialog(tk.Toplevel):
         # Add invoice
         if invoice_ref       and self.title_str == "Add_Item":
             utils.insert_invoice(self.conn, invoice_ref)
-            self.parent.populate_treeview()
+            self.parent.update_view()
 
         # Update invoice
         elif merged_invoices and self.title_str == "Edit_Item" and invoice_ref:
             utils.update_invoices(self.conn, merged_invoices, invoice_ref)
-            self.parent.populate_treeview()
+            self.parent.update_view()
 
         # Update operations view
-        self.notebook.children["!operationsview"].populate_treeview()
+        self.notebook.children["!operationsview"].update_view()
         self.destroy()
 
     def merge_invoices(self, selected_items, entry_values):
