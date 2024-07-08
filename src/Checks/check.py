@@ -21,13 +21,15 @@ class IsFloat(Check):
         super().__init__()
 
     def check(self):
-        return_value = True
+        return_value = False
         if self.entry.get():
             try:
                 number = float(self.entry.get())
+                return_value = True
             except ValueError:
-                messagebox.showerror("Error", f"{self.entry_name}: value '{str(self.entry.get())}' is not a float")
-                return_value = False
+                return_value = False # messagebox.showerror("Error", f"{self.entry_name}: value '{str(self.entry.get())}' is not a float")
+        if not return_value:
+            messagebox.showerror("Error", f"{self.entry_name}: value '{str(self.entry.get())}' is not a float") 
         return return_value
 
 

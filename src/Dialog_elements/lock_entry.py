@@ -1,6 +1,6 @@
 import tkinter as tk
 
-class EnableEntry:
+class LockEntry:
     def __init__(self, entry, label_frame, enabled_by_default=True, locked=False):
         self.entry = entry
         self.label_frame = label_frame

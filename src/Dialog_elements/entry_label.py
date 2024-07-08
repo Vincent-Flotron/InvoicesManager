@@ -1,5 +1,5 @@
 import tkinter as tk
-from Dialog_elements.enable_entry import EnableEntry
+from Dialog_elements.lock_entry import LockEntry
 
 
 class EntryLabel:
@@ -9,7 +9,7 @@ class EntryLabel:
         self.label.grid(row=row_nb, column=0, sticky="w")
         self.entry.grid(row=row_nb, column=1)
         
-        self.ee    = EnableEntry(
+        self.ee    = LockEntry(
             entry              = self.entry,
             label_frame        = label_frame,
             enabled_by_default = not many_items,
