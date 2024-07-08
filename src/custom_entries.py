@@ -16,7 +16,7 @@ class Cust_Entry(Entry):
 class Cust_Combobox(Combobox):
     def __init__(self, choices_list, populated_value):
         self.choices_list     = choices_list
-        self.populated_value  = populated_value
+        self.populated_value  = populated_value if populated_value != None else ''
 
     def make(self, root, **kwargs):
         super().__init__(root, **kwargs)
