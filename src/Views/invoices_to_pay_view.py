@@ -1,11 +1,12 @@
 import tkinter      as tk
 import Checks.check as check
 import utils
-from   models                      import Invoice
-from   Views.base_view             import BaseView
-from   Dialog_elements.entry_label import EntryLabels
-from   custom_entries              import *
-from   extract                     import *
+from  tkinter                     import font
+from  models                      import Invoice
+from  Views.base_view             import BaseView
+from  Dialog_elements.entry_label import EntryLabels
+from  custom_entries              import *
+from  extract                     import *
 
 
 class InvoicesToPayView(BaseView):
@@ -15,7 +16,15 @@ class InvoicesToPayView(BaseView):
         delete_func = utils.delete_invoice
         columns_names = fields_for_columns
         super().__init__(parent, conn, "invoices_to_pay", fields_for_columns, columns_names, dialog_class, delete_func, *args, **kwargs)
+        self.auto_adjust_column_widths()
 
+    def auto_adjust_column_widths(self):
+        for col in self.tree["columns"]:
+            max_width = font.Font().measure(col.title())
+            for item in self.tree.get_children():
+                item_text = self.tree.item(item)["values"][self.tree["columns"].index(col)]
+                max_width = max(max_width, font.Font().measure(str(item_text)))
+            self.tree.column(col, width=max_width)
 
 class InvoiceDialog(tk.Toplevel):
     def DEBUG(self):
