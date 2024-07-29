@@ -75,12 +75,13 @@ def update_invoices(conn, invoices, invoice_ref):
     
     # Update related operations if exists
     for new_invoice, rec_invoice in zip(invoices, recorded_invoices):
-        related_operation_was_updated = update_related_operation(c, rec_invoice, new_invoice)
-
+        related_operation_was_updated  = update_related_operation(c, rec_invoice, new_invoice)
+        new_invoice_has_paying_account = new_invoice.has_paying_account()
+        new_invoice_is_paid            = new_invoice.is_paid()        
         # Create a new operation
         if not related_operation_was_updated \
         and new_invoice.has_paying_account() \
-        and new_invoice.is_paid():
+        and new_invoice_is_paid:
             invoice_updated = fetch_invoice_by_id(c, new_invoice.id)
             insert_operation_from_invoice(c, invoice_updated)
     commit_if_connection(conn)
@@ -228,6 +229,11 @@ def get_paying_account_id_from_descr(conn, account_description):
 def insert_account(conn, account):
     c = get_cursor(conn)
     c.execute("INSERT INTO accounts (description, bank_name, account_number) VALUES (?, ?, ?)", (account.description, account.bank_name, account.iban))
+    commit_if_connection(conn)
+
+def update_accounts(conn, accounts, account_ref):
+    c = get_cursor(conn)
+    update_records_fields(c, 'accounts', accounts, account_ref)
     commit_if_connection(conn)
 
 def update_account(conn, account):

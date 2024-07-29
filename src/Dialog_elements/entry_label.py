@@ -115,10 +115,12 @@ class EntryLabels:
 
     def get_enabled_entry_values(self):
         enabled_entry_values = {}
-        for _, entry_label in self.entry_labels.items():
+        for key, entry_label in self.entry_labels.items():
             val = entry_label.get_value_if_enabled()
-            if val:
-                enabled_entry_values[entry_label.get_name()] = val # edit to get enabled value and name given by get_enabled_value. to avoid error with paying_account -> paying_account_id
+            # if val:
+            if key != 'id':
+                # edit to get enabled value and name given by get_enabled_value. to avoid error with paying_account -> paying_account_id
+                enabled_entry_values[entry_label.get_name()] = val
         return enabled_entry_values
 
     def __setitem__(self, key, value):

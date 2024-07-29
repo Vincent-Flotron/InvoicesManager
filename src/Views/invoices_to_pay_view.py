@@ -26,6 +26,7 @@ class InvoicesToPayView(BaseView):
                 max_width = max(max_width, font.Font().measure(str(item_text)))
             self.tree.column(col, width=max_width)
 
+
 class InvoiceDialog(tk.Toplevel):
     def DEBUG(self):
         if self.title_str == "Add_Item":
@@ -47,12 +48,16 @@ class InvoiceDialog(tk.Toplevel):
             self.id           = None
         self.need_update_view = False
 
+        # Queries
+        self.query_insert      = utils.insert_invoice
+        self.query_update      = utils.update_invoices
+        self.query_fetch_by_id = utils.fetch_invoice_by_id
+        self.object_type       = utils.Invoice
+
         # Create UI elements to enter invoice details
         label_frame = tk.LabelFrame(self, text="Invoice Details")
         label_frame.pack(pady=10, padx=10)
         self.entries_labels = EntryLabels(label_frame, self.many_items)
-
-
 
         self.has_selected_items = True if selected_items else False
         invoice       = selected_items[0] if self.has_selected_items else None
@@ -106,64 +111,74 @@ class InvoiceDialog(tk.Toplevel):
             return
 
         enabled_values        = self.entries_labels.get_enabled_entry_values()
-        merged_invoices       = None
+        merged_objects        = None
         if self.has_selected_items:
-            merged_invoices   = self.merge_invoices(    self.selected_items, enabled_values )
-        invoice_ref           = self.generate_invoices( self.selected_items, enabled_values )[0]
+            # merged_invoices   = self.merge_invoices(    self.selected_items, enabled_values )
+            merged_objects    = self.merge_rec_objects(    self.selected_items, enabled_values, self.query_fetch_by_id)
+        # invoice_ref           = self.generate_invoices( self.selected_items, enabled_values )[0]
+        object_template       = self.generate_rec_objects( self.selected_items, enabled_values, self.object_type)[0]
         self.need_update_view = True
 
         # Add invoice
-        if invoice_ref       and self.title_str == "Add_Item":
-            utils.insert_invoice(self.conn, invoice_ref)
+        if object_template  and self.title_str == "Add_Item":
+            # utils.insert_invoice(self.conn, object_template)
+            self.query_insert(self.conn, object_template)
             self.parent.update_view()
 
         # Update invoice
-        elif merged_invoices and self.title_str == "Edit_Item" and invoice_ref:
-            utils.update_invoices(self.conn, merged_invoices, invoice_ref)
+        elif merged_objects and self.title_str == "Edit_Item" and object_template:
+            self.query_update(self.conn, merged_objects, object_template)
             self.parent.update_view()
 
         # Update operations view
         self.notebook.children["!operationsview"].update_view()
         self.destroy()
 
-    def merge_invoices(self, selected_items, entry_values):
-        invoices = []
+    # def merge_invoices(self, selected_items, entry_values):
+    #     return self.merge_rec_objects(selected_items, entry_values, utils.fetch_invoice_by_id)
+
+    def merge_rec_objects(self, selected_items, entry_values, query_rec_object):
+        rec_objects = []
         for item in selected_items:
-            invoices_updated = utils.fetch_invoice_by_id(self.conn, item.id)
+            rec_objects_updated = query_rec_object(self.conn, item.id)
             # Assuming enabled_values is a dictionary with attribute names and functions or keys to get the values
             for name, value in entry_values.items():
-                setattr(invoices_updated, name, value)
-            invoices.append(invoices_updated)
-        return invoices
+                setattr(rec_objects_updated, name, value)
+            rec_objects.append(rec_objects_updated)
+        return rec_objects
     
-    def generate_invoices(self, selected_items, entry_values):
-        invoices = []
+    # def generate_invoices(self, selected_items, entry_values):
+    #     return self.generate_rec_objects(selected_items, entry_values, Invoice)
+    
+    def generate_rec_objects(self, selected_items, entry_values, rec_obj_type):
+        rec_objects = []
         if selected_items:
             for item in selected_items:
-                invoice = self.generate_invoice(item, entry_values)
+                invoice = self.generate_a_rec_obj(item, entry_values, rec_obj_type)
 
-                invoices.append(invoice)
+                rec_objects.append(invoice)
         else:
-            invoice = self.generate_invoice(None, entry_values)
+            invoice = self.generate_a_rec_obj(None, entry_values, rec_obj_type)
             invoice_cleaned = self.replace_none_fields(invoice)
-            invoices.append(invoice_cleaned)
-        return invoices
-    
-    def replace_none_fields(self, invoice):
-        # print all properties and their values
-        for prop_name, prop_value in invoice.__dict__.items():
-            if prop_name != 'id' and prop_value == None:
-                setattr(invoice, prop_name, '')
-        return invoice
+            rec_objects.append(invoice_cleaned)
+        return rec_objects
 
-    def generate_invoice(self, selected_items, entry_values):
-        invoice = Invoice()
+    def replace_none_fields(self, object_with_none_fields):
+        # print all properties and their values
+        for prop_name, prop_value in object_with_none_fields.__dict__.items():
+            if prop_name != 'id' and prop_value == None:
+                setattr(object_with_none_fields, prop_name, '')
+        object_without_none_fields = object_with_none_fields
+        return object_without_none_fields
+    
+    def generate_a_rec_obj(self, selected_items, entry_values, rec_obj_type):
+        rec_obj = rec_obj_type()
         # Assuming enabled_values is a dictionary with attribute names and functions or keys to get the values
         for name, value in entry_values.items():
-            setattr(invoice, name, value)
+            setattr(rec_obj, name, value)
         if selected_items:
-            invoice.id = selected_items.id
-        return invoice
+            rec_obj.id = selected_items.id
+        return rec_obj
 
     def validate_fields(self):
         all_is_ok = self.entries_labels.check_all_entries()

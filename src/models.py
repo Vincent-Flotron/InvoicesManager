@@ -2,11 +2,12 @@ import sqlite3
 from datetime import date
 
 class Account:
-    def __init__(self, id=None, description=None, bank_name=None, iban=None):
-        self.id          = id
-        self.description = description
-        self.bank_name   = bank_name
-        self.iban        = iban
+    def __init__(self, id=None, description=None, bank_name=None, account_number=None):
+        self.id             = id
+        self.description    = description
+        self.bank_name      = bank_name
+        # self.iban           = iban
+        self.account_number = account_number
 
 class Invoice:
     def __init__(self, id=None, primary_receiver=None, receiver_name=None, receiver_address=None, receiver_account=None, primary_reference=None, secondary_reference=None, invoice_date=None, due_date=None, paid_date=None, amount=None, paying_account_id=None, file_path=None, remark=None, description=None, note=None, tag=None, category=None):
