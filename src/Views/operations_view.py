@@ -1,27 +1,39 @@
 import tkinter as tk
-from tkinter import ttk
-from datetime import datetime
-from models import Operation
+from   tkinter         import ttk
+from   datetime        import datetime
+from   models          import Operation
+from   tkinter         import font
+from   Views.base_view import BaseView
+import format
 import utils
 import validation
-import format
-from Views.base_view import BaseView
 
 
 class OperationsView(BaseView):
     def __init__(self, parent, conn, *args, **kwargs):
-        fields_for_columns = ("id", "paid_date", "type", "income", "outcome", "remain", "account_id", "", "invoice_id", "file_path")
+        fields_for_columns = ("id", "paid_date", "type", "income", "outcome", "remain", "account_id", "receiver", "invoice_id", "file_path")
         dialog_class = OperationDialog
         delete_func = utils.delete_operation
         columns_names = ("id", "paid_date", "type", "income", "outcome", "remain", "account name", "receiver", "invoice ref", "file_path")
         super().__init__(parent, conn, "operations", fields_for_columns, columns_names, dialog_class, delete_func, *args, **kwargs)
+        # self.auto_adjust_column_widths()
 
+    # def auto_adjust_column_widths(self):
+    #     for col in self.tree["columns"]:
+    #         max_width = font.Font().measure(col.title())
+    #         for item in self.tree.get_children():
+    #             print(f'self.tree["columns"].index(col): {self.tree["columns"].index(col)}')
+    #             print(f'self.tree.item(item)["values"]: {self.tree.item(item)["values"]}')
+    #             print('-------')
+    #             item_text = self.tree.item(item)["values"][self.tree["columns"].index(col)]
+    #             max_width = max(max_width, font.Font().measure(str(item_text)))
+    #         self.tree.column(col, width=max_width)
 
         super().add_checkboxes_filter(filter_on="account",
-                                   record_to_thick_list=utils.fetch_accounts(self.conn),
-                                   text_attribute="description",
-                                   variable_attribute="id",
-                                   item_linked_attribute="account_id")
+                                    record_to_thick_list=utils.fetch_accounts(self.conn),
+                                    text_attribute="description",
+                                    variable_attribute="id",
+                                    item_linked_attribute="account_id")
 
 
     def add_customized_account_closure(self):

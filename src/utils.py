@@ -147,11 +147,15 @@ def update_related_operation(conn, recorded_invoice, invoice):
 
 def delete_invoice(conn, invoice_id):
     c = get_cursor(conn)
-    c.execute("DELETE FROM invoices WHERE id=?", (invoice_id,))
-    
+
+    # Delete relative operation
     relative_operation     = fetch_operation_by_invoice_id(conn, invoice_id)
     if relative_operation:
         delete_operation(conn, relative_operation.id)
+    
+    # Delete the invoice
+    c.execute("DELETE FROM invoices WHERE id=?", (invoice_id,))
+    
 
     commit_if_connection(conn)
 
@@ -317,6 +321,12 @@ def update_operation_account_from_invoice(conn, invoice):
 
 def delete_account(conn, account_id):
     c = get_cursor(conn)
+
+    # Delete relative operations
+    relative_operations     = fetch_operations_by_account_id(conn, account_id)
+    for rel_op in relative_operations:
+        delete_operation(conn, rel_op.id)
+
     c.execute("DELETE FROM accounts WHERE id=?", (account_id,))
     commit_if_connection(conn)
 
@@ -367,6 +377,21 @@ def fetch_operation_by_invoice_id(conn, invoice_id):
     if row:
         return Operation(*row)
     return None
+
+
+def fetch_operations_by_account_id(conn, account_id):
+    c = get_cursor(conn)
+    c.execute("SELECT * FROM operations WHERE account_id=?", (account_id,))
+    rows = c.fetchall()
+
+    operations = []
+    if rows:
+        for row in rows:
+            operations.append(Operation(*row))
+    else:
+        operations = None
+    return operations
+
 
 def fetch_operations_by_type(conn, operation_type):
     c = get_cursor(conn)
