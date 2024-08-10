@@ -2,7 +2,6 @@ import tkinter as tk
 import Checks.check as check
 import utils
 from  tkinter                     import font
-from  models                      import Account
 from  Views.base_view             import BaseView
 from  Dialog_elements.entry_label import EntryLabels
 from  custom_entries              import *
@@ -59,11 +58,11 @@ class AccountDialog(tk.Toplevel):
         self.entries_labels = EntryLabels(label_frame, self.many_items)
 
         self.has_selected_items = True if selected_items else False
-        account       = selected_items[0] if self.has_selected_items else None
+        account                 = selected_items[0] if self.has_selected_items else None
 
         self.entries_labels.make_entry_label("Description",    "description",     Cust_Entry(self.none(account, 'description')),      (check.IsRequired(),),  None,            False)
         self.entries_labels.make_entry_label("Bank Name",      "bank_name",       Cust_Entry(self.none(account, 'bank_name')),        (check.IsRequired(),),  None,            False)
-        self.entries_labels.make_entry_label("Account Number", "account_number ", Cust_Entry(self.none(account, 'account_number')),   (check.IsRequired(),),  None,            False)
+        self.entries_labels.make_entry_label("Account Number", "account_number",  Cust_Entry(self.none(account, 'account_number')),   (check.IsRequired(),),  None,            False)
 
         # Add buttons to save or cancel
         save_button = tk.Button(self, text="Save", command=self.save)

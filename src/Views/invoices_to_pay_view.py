@@ -2,7 +2,6 @@ import tkinter      as tk
 import Checks.check as check
 import utils
 from  tkinter                     import font
-from  models                      import Invoice
 from  Views.base_view             import BaseView
 from  Dialog_elements.entry_label import EntryLabels
 from  custom_entries              import *
@@ -55,48 +54,48 @@ class InvoiceDialog(tk.Toplevel):
         self.object_type       = utils.Invoice
 
         # Create UI elements to enter invoice details
-        label_frame = tk.LabelFrame(self, text="Invoice Details")
+        label_frame         = tk.LabelFrame(self, text="Invoice Details")
         label_frame.pack(pady=10, padx=10)
         self.entries_labels = EntryLabels(label_frame, self.many_items)
 
+        # Get first invoice of the selection
         self.has_selected_items = True if selected_items else False
-        invoice       = selected_items[0] if self.has_selected_items else None
+        first_invoice           = selected_items[0] if self.has_selected_items else None
+        # Get actual paying account linked to the first invoice
+        act_paying_account_id   = selected_items[0].paying_account_id if self.has_selected_items else ""
+        act_paying_account      = utils.get_account_description(self.conn, act_paying_account_id)
 
-        act_paying_account_id = selected_items[0].paying_account_id if selected_items else ""
-        act_paying_account    = utils.get_account_description(self.conn, act_paying_account_id)
-
+        # Set input fields
         paying_account_cb = Cust_Combobox([account.description for account in utils.fetch_accounts(self.conn)], act_paying_account)
-        self.entries_labels.make_entry_label("Primary Receiver",   "primary_receiver",    Cust_Entry(self.none(invoice, 'primary_receiver')),    (check.IsRequired(),),                        None,            False)
-        self.entries_labels.make_entry_label("Receiver Name",      "receiver_name",       Cust_Entry(self.none(invoice, 'receiver_name')),       (None),                                       None,            False)
-        self.entries_labels.make_entry_label("Receiver Address",   "receiver_address",    Cust_Entry(self.none(invoice, 'receiver_address')),    (check.IsRequired(),),                        None,            False)
-        self.entries_labels.make_entry_label("Receiver Account",   "receiver_account",    Cust_Entry(self.none(invoice, 'receiver_account')),    (check.IsRequired(),),                        None,            False)
-        self.entries_labels.make_entry_label("Primary Reference",  "primary_reference",   Cust_Entry(self.none(invoice, 'primary_reference')),   (check.IsRequired(),),                        None,            True if self.many_items else False)
-        self.entries_labels.make_entry_label("Secondary Reference","secondary_reference", Cust_Entry(self.none(invoice, 'secondary_reference')), (None),                                       None,            True if self.many_items else False)
-        self.entries_labels.make_entry_label("Invoice Date",       "invoice_date",        Cust_Entry(self.none(invoice, 'invoice_date')),        (check.IsRequired(),   check.IsValidDate()),  ExtractDate(),   False)
-        self.entries_labels.make_entry_label("Due Date",           "due_date",            Cust_Entry(self.none(invoice, 'due_date')),            (check.IsRequired(),   check.IsValidDate()),  ExtractDate(),   False)
-        self.entries_labels.make_entry_label("Paid Date",          "paid_date",           Cust_Entry(self.none(invoice, 'paid_date')),           (check.IsValidDate(),),                       ExtractDate(),   False)
-        self.entries_labels.make_entry_label("Amount",             "amount",              Cust_Entry(self.none(invoice, 'amount')),              (check.IsFloat(),),                           ExtractAmount(), False)
-        self.entries_labels.make_entry_label("Paying Account",     "paying_account_id",   paying_account_cb,                                     (check.IsInTable(self.conn, "accounts", "description"),),
-                                                                                                                                                                                               ExtractUsingQuery(self.conn, utils.get_paying_account_id_from_descr),
-                                                                                                                                                                                                                False)
-        self.entries_labels.make_entry_label("Remark",             "remark",              Cust_Entry(self.none(invoice,  'remark')),             (None),                                       None,            False)
-        self.entries_labels.make_entry_label("Description",        "description",         Cust_Entry(self.none(invoice,  'description')),        (None),                                       None,            False)
-        self.entries_labels.make_entry_label("Note",               "note",                Cust_Entry(self.none(invoice,  'note')),               (None),                                       None,            False)
-        self.entries_labels.make_entry_label("Tag",                "tag",                 Cust_Entry(self.none(invoice,  'tag')),                (None),                                       None,            False)
-        self.entries_labels.make_entry_label("Category",           "category",            Cust_Entry(self.none(invoice,  'category')),           (None),                                       None,            False)
-        self.entries_labels.make_entry_label("File Path",          "file_path",           Cust_file_path(self.none(invoice,'file_path')),        (None),                                       None,            True if self.many_items else False)
+        self.entries_labels.make_entry_label("Primary Receiver",   "primary_receiver",    Cust_Entry(self.none(first_invoice, 'primary_receiver')),    (check.IsRequired(),),                        None,            False)
+        self.entries_labels.make_entry_label("Receiver Name",      "receiver_name",       Cust_Entry(self.none(first_invoice, 'receiver_name')),       (None),                                       None,            False)
+        self.entries_labels.make_entry_label("Receiver Address",   "receiver_address",    Cust_Entry(self.none(first_invoice, 'receiver_address')),    (check.IsRequired(),),                        None,            False)
+        self.entries_labels.make_entry_label("Receiver Account",   "receiver_account",    Cust_Entry(self.none(first_invoice, 'receiver_account')),    (check.IsRequired(),),                        None,            False)
+        self.entries_labels.make_entry_label("Primary Reference",  "primary_reference",   Cust_Entry(self.none(first_invoice, 'primary_reference')),   (check.IsRequired(),),                        None,            True if self.many_items else False)
+        self.entries_labels.make_entry_label("Secondary Reference","secondary_reference", Cust_Entry(self.none(first_invoice, 'secondary_reference')), (None),                                       None,            True if self.many_items else False)
+        self.entries_labels.make_entry_label("Invoice Date",       "invoice_date",        Cust_Entry(self.none(first_invoice, 'invoice_date')),        (check.IsRequired(),   check.IsValidDate()),  ExtractDate(),   False)
+        self.entries_labels.make_entry_label("Due Date",           "due_date",            Cust_Entry(self.none(first_invoice, 'due_date')),            (check.IsRequired(),   check.IsValidDate()),  ExtractDate(),   False)
+        self.entries_labels.make_entry_label("Paid Date",          "paid_date",           Cust_Entry(self.none(first_invoice, 'paid_date')),           (check.IsValidDate(),),                       ExtractDate(),   False)
+        self.entries_labels.make_entry_label("Amount",             "amount",              Cust_Entry(self.none(first_invoice, 'amount')),              (check.IsFloat(),),                           ExtractAmount(), False)
+        self.entries_labels.make_entry_label("Paying Account",     "paying_account_id",   paying_account_cb,                                           (check.IsInTable(self.conn, "accounts", "description"),),
+                                                                                                                                                                                                     ExtractUsingQuery(self.conn, utils.get_paying_account_id_from_descr),
+                                                                                                                                                                                                                      False)
+        self.entries_labels.make_entry_label("Remark",             "remark",              Cust_Entry(self.none(first_invoice,  'remark')),             (None),                                       None,            False)
+        self.entries_labels.make_entry_label("Description",        "description",         Cust_Entry(self.none(first_invoice,  'description')),        (None),                                       None,            False)
+        self.entries_labels.make_entry_label("Note",               "note",                Cust_Entry(self.none(first_invoice,  'note')),               (None),                                       None,            False)
+        self.entries_labels.make_entry_label("Tag",                "tag",                 Cust_Entry(self.none(first_invoice,  'tag')),                (None),                                       None,            False)
+        self.entries_labels.make_entry_label("Category",           "category",            Cust_Entry(self.none(first_invoice,  'category')),           (None),                                       None,            False)
+        self.entries_labels.make_entry_label("File Path",          "file_path",           Cust_file_path(self.none(first_invoice,'file_path')),        (None),                                       None,            True if self.many_items else False)
 
-        # Add buttons to save or cancel
-        save_button = tk.Button(self, text="Save", command=self.save)
+        # Buttons to save or cancel
+        save_button   = tk.Button(self, text="Save", command=self.save)
         save_button.pack()
-
         cancel_button = tk.Button(self, text="Cancel", command=self.destroy)
         cancel_button.pack()
 
         # Populate the dialog with invoice data if editing
         if self.has_selected_items:
             self.entries_labels.populate()
-            # self.populate_fields(item[0])
         
         self.DEBUG()
 

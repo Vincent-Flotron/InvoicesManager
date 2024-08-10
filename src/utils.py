@@ -228,7 +228,7 @@ def get_paying_account_id_from_descr(conn, account_description):
 
 def insert_account(conn, account):
     c = get_cursor(conn)
-    c.execute("INSERT INTO accounts (description, bank_name, account_number) VALUES (?, ?, ?)", (account.description, account.bank_name, account.iban))
+    c.execute("INSERT INTO accounts (description, bank_name, account_number) VALUES (?, ?, ?)", (account.description, account.bank_name, account.account_number))
     commit_if_connection(conn)
 
 def update_accounts(conn, accounts, account_ref):
